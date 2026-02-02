@@ -37,19 +37,21 @@ export default function TodoItem({
     >
       <div className="min-w-0 flex-1 space-y-3 overflow-hidden">
         <div className="flex items-center gap-2 overflow-hidden">
-          <button
-            type="button"
-            onClick={() => onToggle(todo.id)}
-            className={[
-              'flex h-7 w-7 items-center justify-center rounded-xl text-xs font-semibold transition ring-1',
-              isDone
-                ? 'bg-neutral-900 text-white ring-neutral-900'
-                : 'bg-white text-neutral-500 ring-neutral-200 hover:ring-neutral-300',
-            ].join(' ')}
-            aria-label="완료 체크"
-          >
-            {isDone ? '✓' : ''}
-          </button>
+          {!editing && (
+            <button
+              type="button"
+              onClick={() => onToggle(todo.id)}
+              className={[
+                'flex h-7 w-7 items-center justify-center rounded-xl text-xs font-semibold transition ring-1',
+                isDone
+                  ? 'bg-neutral-900 text-white ring-neutral-900'
+                  : 'bg-white text-neutral-500 ring-neutral-200 hover:ring-neutral-300',
+              ].join(' ')}
+              aria-label="완료 체크"
+            >
+              {isDone ? '✓' : ''}
+            </button>
+          )}
 
           <div className="flex min-w-0 flex-col gap-1 overflow-hidden">
             {editing ? (
@@ -91,39 +93,42 @@ export default function TodoItem({
 
       <div className="flex items-center gap-2">
         {!todo.isFixed && (
-          <>
+          editing ? (
+            <button
+              type="button"
+              onClick={save}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-900 text-white ring-1 ring-neutral-900 transition"
+              aria-label="저장"
+            >
+              ✓
+            </button>
+          ) : (
             <button
               type="button"
               onClick={() => {
                 setDraftTitle(todo.title);
                 setDraftSubject(todo.subject);
-                setEditing((v) => !v);
+                setEditing(true);
               }}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-neutral-700 ring-1 ring-neutral-200 transition hover:ring-neutral-300"
               aria-label="수정"
             >
               ✎
             </button>
-            {editing && (
-              <button
-                type="button"
-                onClick={save}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-900 text-white ring-1 ring-neutral-900 transition"
-                aria-label="저장"
-              >
-                ✓
-              </button>
-            )}
-          </>
+          )
         )}
-        <button
-          type="button"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-neutral-700 ring-1 ring-neutral-200 transition hover:ring-neutral-300"
-          aria-label="타이머 시작"
-        >
-          ▶
-        </button>
-        {!todo.isFixed && (
+
+        {!editing && (
+          <button
+            type="button"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-neutral-700 ring-1 ring-neutral-200 transition hover:ring-neutral-300"
+            aria-label="타이머 시작"
+          >
+            ▶
+          </button>
+        )}
+
+        {!todo.isFixed && !editing && (
           <button
             type="button"
             onClick={() => onRemove(todo.id)}
