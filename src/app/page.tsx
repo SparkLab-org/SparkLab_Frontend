@@ -1,59 +1,57 @@
+'use client';
+
 import Link from 'next/link';
+import { useState } from 'react';
+import LoginCard, { LoginRole } from '@/src/components/auth/LoginCard';
 
 export default function Home() {
+  const [role, setRole] = useState<LoginRole>('mentee');
+
   return (
-    <main className="min-h-screen bg-gradient-to-b from-neutral-900 via-neutral-900 to-neutral-950 px-6 py-10 text-white">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-        <section className="space-y-3 rounded-3xl bg-white/5 p-6 ring-1 ring-white/10 backdrop-blur">
-          <p className="text-xs uppercase tracking-[0.2em] text-neutral-300">Seolstudy</p>
-          <h1 className="text-2xl font-semibold leading-snug">고등학생을 위한 학습 코칭 MVP</h1>
-          <p className="text-sm text-neutral-300">
-            멘토는 계획을 고정하고, 멘티는 일일 플래너로 학습을 기록합니다.
-            필요한 화면으로 바로 이동하세요.
-          </p>
-          <div className="flex flex-wrap gap-2 text-[11px] font-medium text-neutral-200">
-            <span className="rounded-full bg-white/10 px-3 py-1 ring-1 ring-white/10">모바일 멘티</span>
-            <span className="rounded-full bg-white/10 px-3 py-1 ring-1 ring-white/10">PC 멘토</span>
-            <span className="rounded-full bg-white/10 px-3 py-1 ring-1 ring-white/10">플래너·피드백·과제</span>
+    <main className="min-h-screen bg-white text-neutral-900">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-12 px-6 py-12 lg:px-10">
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-black" aria-hidden />
+            <div>
+              <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">Seolstudy</p>
+              <p className="text-sm font-semibold">학습 코칭 플랫폼</p>
+            </div>
           </div>
-        </section>
+          <div className="hidden gap-4 text-sm font-medium text-neutral-600 md:flex">
+            <Link href="/planner" className="hover:text-neutral-900">
+              플래너
+            </Link>
+            <Link href="/feedback" className="hover:text-neutral-900">
+              피드백
+            </Link>
+            <Link href="/mentees" className="hover:text-neutral-900">
+              멘토 대시보드
+            </Link>
+          </div>
+        </header>
 
-        <section className="grid gap-4 md:grid-cols-2">
-          <Link
-            href="/planner"
-            className="group rounded-2xl border border-white/10 bg-white/5 p-5 transition hover:-translate-y-1 hover:border-white/30 hover:bg-white/10"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">멘티 플로우</p>
-              <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-[11px] font-semibold text-emerald-200">
-                모바일
-              </span>
+        <section className="grid gap-10 lg:grid-cols-2 lg:items-start">
+          <div className="space-y-4">
+            <h1 className="text-3xl font-semibold leading-tight lg:text-4xl">설스터디</h1>
+            <p className="text-base text-neutral-600">
+              멘티는 하루 플래너와 과제를, 멘토는 멘티 관리와 피드백을 한 곳에서. 흑백 톤으로 정돈된 홈에서
+              원하는 역할로 바로 로그인하세요.
+            </p>
+            <div className="flex flex-wrap gap-2 text-sm text-neutral-600">
+              <span className="rounded-full bg-neutral-100 px-3 py-1">반응형 지원</span>
+              <span className="rounded-full bg-neutral-100 px-3 py-1">멘티 · 멘토 분리</span>
+              <span className="rounded-full bg-neutral-100 px-3 py-1">플래너·과제·피드백</span>
             </div>
-            <h2 className="mt-2 text-lg font-semibold">플래너 → 피드백 → 마이</h2>
-            <p className="mt-2 text-sm text-neutral-300">할 일·공부시간 기록, 피드백 확인, 프로필 관리.</p>
-            <div className="mt-4 flex gap-2 text-[12px] text-neutral-200">
-              <span className="rounded-full bg-white/10 px-2 py-1">/planner</span>
-              <span className="rounded-full bg-white/10 px-2 py-1">/feedback</span>
-              <span className="rounded-full bg-white/10 px-2 py-1">/my</span>
-            </div>
-          </Link>
+            <Link
+              href="/planner"
+              className="inline-flex items-center justify-center rounded-full bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              로그인 없이 멘티 화면 둘러보기
+            </Link>
+          </div>
 
-          <Link
-            href="/mentees"
-            className="group rounded-2xl border border-white/10 bg-white/5 p-5 transition hover:-translate-y-1 hover:border-white/30 hover:bg-white/10"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">멘토 대시보드</p>
-              <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-[11px] font-semibold text-cyan-100">
-                PC 우선
-              </span>
-            </div>
-            <h2 className="mt-2 text-lg font-semibold">멘티 목록 & 피드백 작성</h2>
-            <p className="mt-2 text-sm text-neutral-300">최대 11명 멘티 관리, 하루 피드백 작성 진입.</p>
-            <div className="mt-4 flex gap-2 text-[12px] text-neutral-200">
-              <span className="rounded-full bg-white/10 px-2 py-1">/mentees</span>
-            </div>
-          </Link>
+          <LoginCard role={role} onRoleChange={setRole} />
         </section>
       </div>
     </main>

@@ -21,15 +21,17 @@ export default function TodoItem({
   const isDone = todo.status === 'DONE';
 
   return (
-    <div className="flex items-start justify-between gap-3 rounded-lg border px-3 py-3">
+    <div className="flex items-start justify-between gap-3 rounded-2xl border border-neutral-200 bg-white px-3 py-3 shadow-sm">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => onToggle(todo.id)}
             className={[
-              'h-5 w-5 rounded border flex items-center justify-center',
-              isDone ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white',
+              'flex h-6 w-6 items-center justify-center rounded-lg border text-xs font-semibold transition',
+              isDone
+                ? 'border-neutral-900 bg-neutral-900 text-white'
+                : 'border-neutral-300 bg-neutral-50 text-neutral-400 hover:border-neutral-500',
             ].join(' ')}
             aria-label="완료 체크"
           >
@@ -66,7 +68,7 @@ export default function TodoItem({
             max={1440}
             value={todo.studyMinutes}
             onChange={(e) => onMinutesChange(todo.id, Number(e.target.value))}
-            className="w-20 rounded-md border px-2 py-1 text-xs text-neutral-900"
+            className="w-20 rounded-md border border-neutral-300 bg-neutral-50 px-2 py-1 text-xs text-neutral-900"
             aria-label="공부시간(분)"
           />
           <span>분</span>
@@ -77,7 +79,7 @@ export default function TodoItem({
           <select
             value={todo.subject}
             onChange={(e) => onSubjectChange(todo.id, e.target.value as TodoSubject)}
-            className="w-28 rounded-md border px-2 py-1 text-xs text-neutral-900"
+            className="w-28 rounded-md border border-neutral-300 bg-neutral-50 px-2 py-1 text-xs text-neutral-900"
             aria-label="과목 선택"
           >
             <option value="국어">국어</option>

@@ -26,8 +26,8 @@ export default function TodoList() {
   };
 
   return (
-    <section className="rounded-xl border p-4 shadow-[0_6px_20px_rgba(0,0,0,0.04)] space-y-3">
-      <header className="flex items-start justify-between gap-3">
+    <section className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs text-neutral-500">오늘의 할 일</p>
           <p className="mt-1 text-sm text-neutral-700">
@@ -41,12 +41,12 @@ export default function TodoList() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="할 일을 추가하세요"
-          className="flex-1 rounded-lg border px-3 py-2 text-sm"
+          className="flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900"
         />
         <select
           value={subject}
           onChange={(e) => setSubjectState(e.target.value as TodoSubject)}
-          className="w-full sm:w-32 rounded-lg border px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-2 text-sm text-neutral-900 sm:w-32"
           aria-label="과목 선택"
         >
           <option value="국어">국어</option>
@@ -61,7 +61,7 @@ export default function TodoList() {
         </button>
       </form>
 
-      <div className="space-y-2">
+      <div className="grid gap-2 lg:grid-cols-2">
         {todos.map((t) => (
           <TodoItem
             key={t.id}

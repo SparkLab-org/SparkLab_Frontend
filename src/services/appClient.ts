@@ -1,0 +1,39 @@
+/**
+ * apiClient.ts
+ * 
+ * - 모든 API 요청의 공통 진입점
+ * - Authorization 헤더 자동 첨부
+ * - 401 응답 시 토큰 삭제 및 로그인 처리
+ */
+
+const API_BASE_URL = 'http://localhost:4000';
+
+export async function apiFetch<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = localStorage.getItem('accessToken');
+
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(options.headers || {}),
+    },
+  });
+
+  // 🔥 401 공통 처리
+  if (res.status === 401) {
+    localStorage.removeItem('accessToken');
+    // 실제 프로젝트에선 router.push('/login') 권장
+    window.location.href = '/login';
+    throw new Error('Unauthorized');
+  }
+
+  if (!res.ok) {
+    throw new Error(`API Error: ${res.status}`);
+  }
+
+  return res.json() as Promise<T>;
+}
