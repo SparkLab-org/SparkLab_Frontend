@@ -44,7 +44,7 @@ export default function Home() {
               <span className="rounded-full bg-neutral-100 px-3 py-1">플래너·과제·피드백</span>
             </div>
             <Link
-              href="/planner"
+              href="/task"
               className="inline-flex items-center justify-center rounded-full bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
             >
               로그인 없이 멘티 화면 둘러보기

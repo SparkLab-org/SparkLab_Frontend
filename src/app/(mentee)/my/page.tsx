@@ -1,7 +1,14 @@
+import Link from "next/link";
+
 export default function MyPage() {
   return (
     <div className="space-y-5">
-      <section className="flex items-center gap-4 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+      <section
+        className="flex items-center gap-4 rounded-2xl border border-neutral-200 p-5 shadow-sm"
+        style={{
+          background: 'linear-gradient(180deg, rgba(245, 245, 245, 0) 46.7%, #F5F5F5 100%)',
+        }}
+      >
         <div className="h-16 w-16 rounded-full bg-neutral-200" />
         <div>
           <p className="text-sm text-neutral-500">고등학교 2학년</p>
@@ -10,7 +17,12 @@ export default function MyPage() {
         </div>
       </section>
 
-      <section className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+      <section
+        className="space-y-3 rounded-2xl border border-neutral-200 p-5 shadow-sm"
+        style={{
+          background: 'linear-gradient(180deg, rgba(245, 245, 245, 0) 46.7%, #F5F5F5 100%)',
+        }}
+      >
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold">이번 주 요약</p>
           <span className="text-xs text-neutral-500">완료 8/12</span>
@@ -25,6 +37,7 @@ export default function MyPage() {
       <button className="w-full rounded-xl bg-neutral-900 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5">
         성장 받아보기
       </button>
+      <Link href="/" className="w-full rounded-xl bg-neutral-900 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5">로그아웃</Link>
     </div>
   );
 }

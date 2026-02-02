@@ -12,7 +12,12 @@ export default function FeedbackPage() {
       </header>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+        <section
+          className="space-y-3 rounded-2xl border border-neutral-200 p-5 shadow-sm"
+          style={{
+            background: 'linear-gradient(180deg, rgba(245, 245, 245, 0) 46.7%, #F5F5F5 100%)',
+          }}
+        >
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold">멘토 피드백</p>
             <span className="text-[11px] text-neutral-500">멘토 김OO</span>
@@ -22,7 +27,12 @@ export default function FeedbackPage() {
           </p>
         </section>
 
-        <section className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+        <section
+          className="space-y-3 rounded-2xl border border-neutral-200 p-5 shadow-sm"
+          style={{
+            background: 'linear-gradient(180deg, rgba(245, 245, 245, 0) 46.7%, #F5F5F5 100%)',
+          }}
+        >
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold">주간 계획</p>
             <button className="text-xs font-semibold text-neutral-600 underline">월간 펼치기</button>

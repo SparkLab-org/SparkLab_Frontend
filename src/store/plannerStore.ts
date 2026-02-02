@@ -47,6 +47,9 @@ interface PlannerState {
 
   /** 투두 과목 변경 */
   setSubject: (id: string, subject: TodoSubject) => void;
+
+  /** 투두 제목·과목 수정 */
+  updateTodo: (id: string, title: string, subject: TodoSubject) => void;
 }
 
 /**
@@ -200,4 +203,17 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
       ),
     });
   },
-}));
+
+  /**
+   * ✏️ 투두 수정 (제목 + 과목)
+   */
+  updateTodo: (id, title, subject) => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    set({
+      todos: get().todos.map((t) =>
+        t.id === id ? { ...t, title: trimmed, subject } : t
+      ),
+    });
+  },
+})); 
