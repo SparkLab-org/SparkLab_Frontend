@@ -116,7 +116,7 @@ export default function LoginCard({ role, onRoleChange }: Props) {
       </div>
 
       <div className="rounded-2xl border border-dashed border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-600">
-        계정이 없다면 관리자에게 초대를 요청하세요. 멘토/멘티 전환은 추후 프로필에서 변경할 수 있습니다.
+        계정이 없다면 설스터디에서 학습코칭 상담을 받아보세요.
       </div>
     </div>
   );
