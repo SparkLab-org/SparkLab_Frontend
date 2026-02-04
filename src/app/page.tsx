@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import LoginCard, { LoginRole } from '@/src/components/auth/LoginCard';
+import { useUiPreferenceStore } from '@/src/store/uiPreferenceStore';
 
 export default function Home() {
-  const [role, setRole] = useState<LoginRole>('mentee');
+  const role = useUiPreferenceStore((s) => s.homeRole);
+  const setRole = useUiPreferenceStore((s) => s.setHomeRole);
 
   return (
     <main className="min-h-screen bg-white text-neutral-900">
@@ -35,8 +36,7 @@ export default function Home() {
           <div className="space-y-4">
             <h1 className="text-3xl font-semibold leading-tight lg:text-4xl">설스터디</h1>
             <p className="text-base text-neutral-600">
-              멘티는 하루 플래너와 과제를, 멘토는 멘티 관리와 피드백을 한 곳에서. 흑백 톤으로 정돈된 홈에서
-              원하는 역할로 바로 로그인하세요.
+              멘티는 하루 플래너와 과제를, 멘토는 멘티 관리와 피드백을 한 곳에서.
             </p>
             <div className="flex flex-wrap gap-2 text-sm text-neutral-600">
               <span className="rounded-full bg-neutral-100 px-3 py-1">반응형 지원</span>

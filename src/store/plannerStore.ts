@@ -16,6 +16,7 @@
  */
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Todo, TodoSubject } from '../lib/types/planner';
 
 /**
@@ -23,18 +24,26 @@ import type { Todo, TodoSubject } from '../lib/types/planner';
  *
  * 플래너 화면에서 필요한 상태와 상태 변경 함수들의 타입 정의
  */
+type PlannerView = 'week' | 'month';
+
 interface PlannerState {
   /** 현재 선택된 날짜 (YYYY-MM-DD) */
   selectedDate: string;
+
+  /** 주간 / 월간 등 플래너 뷰 타입 */
+  view: PlannerView;
 
   /** 현재 날짜에 해당하는 투두 목록 */
   todos: Todo[];
 
   /** 날짜 변경 */
-  setSelectedDate: (date: string) => void;
+  setSelectedDate: (date: string | Date) => void;
+
+  /** 플래너 뷰 변경 */
+  setView: (view: PlannerView) => void;
 
   /** 멘티가 투두를 새로 추가 */
-  addTodo: (title: string, subject: TodoSubject) => void;
+  addTodo: (title: string, subject: TodoSubject, dueDate: string, dueTime: string) => void;
 
   /** 투두 삭제 (멘토 고정 투두는 삭제 불가) */
   removeTodo: (id: string) => void;
@@ -93,6 +102,8 @@ const initialTodos: Todo[] = [
     subject: '수학',
     studyMinutes: 0,
     createdAt: Date.now(),
+    dueDate: todayISO(),
+    dueTime: '23:59',
   },
   {
     id: 'seed-2',
@@ -102,6 +113,8 @@ const initialTodos: Todo[] = [
     subject: '영어',
     studyMinutes: 0,
     createdAt: Date.now(),
+    dueDate: todayISO(),
+    dueTime: '21:00',
   },
   {
     id: 'seed-3',
@@ -111,6 +124,8 @@ const initialTodos: Todo[] = [
     subject: '국어',
     studyMinutes: 20,
     createdAt: Date.now(),
+    dueDate: todayISO(),
+    dueTime: '18:30',
   },
 ];
 
@@ -119,101 +134,135 @@ const initialTodos: Todo[] = [
  *
  * 멘티 플래너 화면에서 사용하는 Zustand 스토어
  */
-export const usePlannerStore = create<PlannerState>((set, get) => ({
-  /** 기본 선택 날짜: 오늘 */
-  selectedDate: todayISO(),
+export const usePlannerStore = create<PlannerState>()(
+  persist(
+    (set, get) => ({
+      /** 기본 선택 날짜: 오늘 */
+      selectedDate: todayISO(),
 
-  /** 현재 날짜의 투두 목록 */
-  todos: initialTodos,
+      /** 기본 뷰: 주간 */
+      view: 'week',
 
-  /** 날짜 변경 */
-  setSelectedDate: (date) => set({ selectedDate: date }),
+      /** 현재 날짜의 투두 목록 */
+      todos: initialTodos,
 
-  /**
-   * ➕ 투두 추가
-   * - 멘티만 추가 가능
-   * - 제목이 비어있으면 무시
-   */
-  addTodo: (title, subject) => {
-    const trimmed = title.trim();
-    if (!trimmed) return;
+      /** 날짜 변경 */
+      setSelectedDate: (date) =>
+        set({ selectedDate: typeof date === 'string' ? date : todayISOFrom(date) }),
 
-    const newTodo: Todo = {
-      id: uid(),
-      title: trimmed,
-      isFixed: false,
-      status: 'TODO',
-      subject,
-      studyMinutes: 0,
-      createdAt: Date.now(),
-    };
+      /** 뷰 변경 */
+      setView: (view) => set({ view }),
 
-    // 최신 투두가 위로 오도록 앞에 추가
-    set({ todos: [newTodo, ...get().todos] });
-  },
+      /**
+       * ➕ 투두 추가
+       * - 멘티만 추가 가능
+       * - 제목이 비어있으면 무시
+       */
+      addTodo: (title, subject, dueDate, dueTime) => {
+        const trimmed = title.trim();
+        const dateValue = dueDate.trim();
+        const timeValue = dueTime.trim();
+        if (!trimmed || !dateValue || !timeValue) return;
 
-  /**
-   * 🗑 투두 삭제
-   * - 멘토 고정 투두는 삭제 불가
-   */
-  removeTodo: (id) => {
-    const todo = get().todos.find((t) => t.id === id);
-    if (!todo) return;
-    if (todo.isFixed) return;
+        const newTodo: Todo = {
+          id: uid(),
+          title: trimmed,
+          isFixed: false,
+          status: 'TODO',
+          subject,
+          studyMinutes: 0,
+          createdAt: Date.now(),
+          dueDate: dateValue,
+          dueTime: timeValue,
+        };
 
-    set({ todos: get().todos.filter((t) => t.id !== id) });
-  },
+        // 최신 투두가 위로 오도록 앞에 추가
+        set({ todos: [newTodo, ...get().todos] });
+      },
 
-  /**
-   * ✅ 투두 완료 / 미완료 토글
-   */
-  toggleTodo: (id) => {
-    set({
-      todos: get().todos.map((t) =>
-        t.id === id
-          ? { ...t, status: t.status === 'DONE' ? 'TODO' : 'DONE' }
-          : t
-      ),
-    });
-  },
+      /**
+       * 🗑 투두 삭제
+       * - 멘토 고정 투두는 삭제 불가
+       */
+      removeTodo: (id) => {
+        const todo = get().todos.find((t) => t.id === id);
+        if (!todo) return;
+        if (todo.isFixed) return;
 
-  /**
-   * ⏱ 공부 시간(분) 설정
-   * - 0 ~ 1440분 범위로 제한
-   */
-  setStudyMinutes: (id, minutes) => {
-    const safe = Number.isFinite(minutes)
-      ? Math.max(0, Math.min(1440, minutes))
-      : 0;
+        set({ todos: get().todos.filter((t) => t.id !== id) });
+      },
 
-    set({
-      todos: get().todos.map((t) =>
-        t.id === id ? { ...t, studyMinutes: safe } : t
-      ),
-    });
-  },
+      /**
+       * ✅ 투두 완료 / 미완료 토글
+       */
+      toggleTodo: (id) => {
+        set({
+          todos: get().todos.map((t) =>
+            t.id === id
+              ? { ...t, status: t.status === 'DONE' ? 'TODO' : 'DONE' }
+              : t
+          ),
+        });
+      },
 
-  /**
-   * 📚 과목 변경
-   */
-  setSubject: (id, subject) => {
-    set({
-      todos: get().todos.map((t) =>
-        t.id === id ? { ...t, subject } : t
-      ),
-    });
-  },
+      /**
+       * ⏱ 공부 시간(분) 설정
+       * - 0 ~ 1440분 범위로 제한
+       */
+      setStudyMinutes: (id, minutes) => {
+        const safe = Number.isFinite(minutes)
+          ? Math.max(0, Math.min(1440, minutes))
+          : 0;
 
-  /**
-   * ✏️ 투두 수정 (제목 + 과목)
-   */
-  updateTodo: (id, title, subject) => {
-    const trimmed = title.trim();
-    if (!trimmed) return;
-    set({
-      todos: get().todos.map((t) =>
-        t.id === id ? { ...t, title: trimmed, subject } : t
-      ),
-    });
-  },
-})); 
+        set({
+          todos: get().todos.map((t) =>
+            t.id === id ? { ...t, studyMinutes: safe } : t
+          ),
+        });
+      },
+
+      /**
+       * 📚 과목 변경
+       */
+      setSubject: (id, subject) => {
+        set({
+          todos: get().todos.map((t) =>
+            t.id === id ? { ...t, subject } : t
+          ),
+        });
+      },
+
+      /**
+       * ✏️ 투두 수정 (제목 + 과목)
+       */
+      updateTodo: (id, title, subject) => {
+        const trimmed = title.trim();
+        if (!trimmed) return;
+        set({
+          todos: get().todos.map((t) =>
+            t.id === id ? { ...t, title: trimmed, subject } : t
+          ),
+        });
+      },
+    }),
+    {
+      name: 'planner-store',
+      storage:
+        typeof window !== 'undefined'
+          ? createJSONStorage(() => localStorage)
+          : undefined,
+      partialize: (state) => ({
+        selectedDate: state.selectedDate,
+        view: state.view,
+      }),
+    }
+  )
+);
+
+/** Date 객체를 YYYY-MM-DD 문자열로 변환 */
+function todayISOFrom(date: Date): string {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}

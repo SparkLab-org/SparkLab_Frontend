@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navItems = [
-  { href: '/task', label: '과제' },
-  { href: '/planner', label: '플래너' },
+  { href: '/feedback', label: '피드백' },
+  { href: '/task', label: '플래너' },
   { href: '/my', label: '마이페이지' },
 ];
 

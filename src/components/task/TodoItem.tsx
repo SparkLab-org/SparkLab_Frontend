@@ -83,9 +83,14 @@ export default function TodoItem({
                 <option value="수학">수학</option>
               </select>
             ) : (
-              <span className="w-fit rounded-full bg-neutral-900 px-2 py-0.5 text-[11px] font-semibold text-white ring-1 ring-neutral-900">
-                {todo.subject}
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="w-fit rounded-full bg-neutral-900 px-2 py-0.5 text-[11px] font-semibold text-white ring-1 ring-neutral-900">
+                  {todo.subject}
+                </span>
+                <span className="text-[11px] text-neutral-500">
+                  마감 {todo.dueDate} {todo.dueTime}
+                </span>
+              </div>
             )}
           </div>
         </div>

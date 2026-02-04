@@ -9,4 +9,6 @@ export interface Todo {
   subject: TodoSubject;
   studyMinutes: number;  // 누적 분
   createdAt: number;
+  dueDate: string;       // YYYY-MM-DD
+  dueTime: string;       // HH:mm
 }
