@@ -46,9 +46,10 @@ export default function TodayTodoSummary() {
         )}
 
         {todayTodos.slice(0, 10).map((todo) => (
-          <div
+          <Link
             key={todo.id}
-            className="flex flex-row gap-2 rounded-xl bg-[#FFF] px-3 py-3 text-xs text-neutral-700"
+            href={`/planner/list/${todo.id}`}
+            className="flex flex-row gap-2 rounded-xl bg-[#FFF] px-3 py-3 text-xs text-neutral-700 transition hover:ring-1 hover:ring-neutral-200"
           >
             <p className="text-sm font-semibold text-neutral-900">{todo.title}</p>
             <div className="flex items-center gap-2">
@@ -66,7 +67,7 @@ export default function TodayTodoSummary() {
                 {todo.status === 'DONE' ? '완료' : '해야 함'}
               </span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   addDays,
   addMonths,
@@ -17,6 +17,7 @@ import PlannerViewToggle from "./PlannerViewToggle";
 import PlannerDateGrid from "./PlannerDateGrid";
 import { usePlannerStore } from "@/src/store/plannerStore";
 import TodoItem from "@/src/components/planner/TodoItem";
+import TodoCreateModal from "@/src/components/planner/TodoCreateModal";
 import type { TodoSubject } from "@/src/lib/types/planner";
 import {
   useDeleteTodoMutation,
@@ -42,6 +43,7 @@ export default function PlannerCalendar({}: Props) {
   const selectedDate = useMemo(() => new Date(selectedDateStr), [selectedDateStr]);
   const setSelectedDate = usePlannerStore((s) => s.setSelectedDate);
   const { data: todos = [] } = useTodosQuery();
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const updateTodoMutation = useUpdateTodoMutation();
   const deleteTodoMutation = useDeleteTodoMutation();
 
@@ -145,6 +147,18 @@ export default function PlannerCalendar({}: Props) {
 
         <div className="mt-4 rounded-2xl p-4">
           <div className="flex items-center justify-between text-l font-semibold text-neutral-900">
+            <div className="flex items-center gap-2 text-right">
+              <span className="text-xl">{headerText}</span>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold text-white"
+                aria-label="할 일 추가"
+              >
+                +
+              </button>
+            </div>
+
             <div className="flex items-center gap-2 text-neutral-500">
               <button
                 type="button"
@@ -163,7 +177,7 @@ export default function PlannerCalendar({}: Props) {
                 ›
               </button>
             </div>
-            <span className="text-right">{headerText}</span>
+            
           </div>
 
           <div className="mt-4 grid grid-cols-7 gap-2 text-center text-sm text-neutral-400">
@@ -188,7 +202,7 @@ export default function PlannerCalendar({}: Props) {
         <header className="flex items-center justify-between">
           <div>
             <p className="text-xl mt-5 font-semibold text-neutral-800">
-              {format(selectedDate, "M월 d일")} 학습목록
+              학습목록
             </p>
             <p className="text-xs text-neutral-500">{selectedTodos.length}개</p>
           </div>
@@ -213,6 +227,12 @@ export default function PlannerCalendar({}: Props) {
           </div>
         )}
       </section>
+      {isModalOpen && (
+        <TodoCreateModal
+          onClose={() => setIsModalOpen(false)}
+          initialDate={selectedDateStr}
+        />
+      )}
     </div>
   );
 }

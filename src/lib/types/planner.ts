@@ -9,6 +9,7 @@ export interface Todo {
   status: TodoStatus;
   subject: TodoSubject;
   type: TodoType;
+  feedback?: string | null;
   studyMinutes: number;  // 누적 분
   createdAt: number;
   dueDate: string;       // YYYY-MM-DD

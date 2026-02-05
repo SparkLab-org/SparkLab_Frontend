@@ -9,7 +9,10 @@ export type CreateTodoInput = {
 };
 
 export type UpdateTodoInput = Partial<
-  Pick<Todo, 'title' | 'subject' | 'status' | 'studyMinutes' | 'dueDate' | 'dueTime' | 'type'>
+  Pick<
+    Todo,
+    'title' | 'subject' | 'status' | 'studyMinutes' | 'dueDate' | 'dueTime' | 'type' | 'feedback'
+  >
 >;
 
 const STORAGE_KEY = 'mock-todos';
@@ -34,6 +37,7 @@ const seedTodos: Todo[] = [
     status: 'TODO',
     subject: '수학',
     type: '과제',
+    feedback: '풀이 과정이 좋아요. 계산 실수를 줄여봅시다.',
     studyMinutes: 0,
     createdAt: Date.now(),
     dueDate: todayISO(),
@@ -46,6 +50,7 @@ const seedTodos: Todo[] = [
     status: 'TODO',
     subject: '영어',
     type: '과제',
+    feedback: '요약이 깔끔해요. 키워드 중심으로 정리해봅시다.',
     studyMinutes: 0,
     createdAt: Date.now(),
     dueDate: todayISO(),
@@ -58,6 +63,7 @@ const seedTodos: Todo[] = [
     status: 'DONE',
     subject: '국어',
     type: '학습',
+    feedback: '요약이 깔끔해요. 키워드 중심으로 정리해봅시다.',
     studyMinutes: 20,
     createdAt: Date.now(),
     dueDate: todayISO(),
@@ -104,6 +110,7 @@ export async function createTodo(input: CreateTodoInput): Promise<Todo> {
     status: 'TODO',
     subject: input.subject,
     type: input.type,
+    feedback: null,
     studyMinutes: 0,
     createdAt: Date.now(),
     dueDate: input.dueDate,

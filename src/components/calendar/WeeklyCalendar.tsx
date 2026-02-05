@@ -99,7 +99,6 @@ export default function WeeklyCalendar({}: Props) {
         progressByDate={progressByDate}
       />
 
-      
     </section>
   );
 }

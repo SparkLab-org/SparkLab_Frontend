@@ -11,7 +11,10 @@ export type CreateTodoInput = {
 };
 
 export type UpdateTodoInput = Partial<
-  Pick<Todo, 'title' | 'subject' | 'status' | 'studyMinutes' | 'dueDate' | 'dueTime' | 'type'>
+  Pick<
+    Todo,
+    'title' | 'subject' | 'status' | 'studyMinutes' | 'dueDate' | 'dueTime' | 'type' | 'feedback'
+  >
 >;
 
 type TodoApiSubject = 'KOREAN' | 'ENGLISH' | 'MATH' | string;
@@ -26,6 +29,7 @@ type TodoApiItem = {
   type?: TodoApiType;
   isFixed: boolean;
   status?: string;
+  feedback?: string | null;
   plannedMinutes?: number;
   actualMinutes?: number;
   completedAt?: string | null;
@@ -46,6 +50,7 @@ type UpdateTodoApiRequest = Partial<CreateTodoApiRequest> & {
   status?: string;
   actualMinutes?: number;
   completedAt?: string | null;
+  feedback?: string | null;
 };
 
 const USE_MOCK = process.env.NEXT_PUBLIC_TODO_API_MODE !== 'backend';
@@ -130,6 +135,7 @@ function mapTodoFromApi(item: TodoApiItem): Todo {
     title: item.title ?? '',
     isFixed: item.isFixed ?? false,
     type: toTodoType(item.type, item.isFixed),
+    feedback: item.feedback ?? null,
     status: toTodoStatus(item.status, item.completedAt ?? null),
     subject: toTodoSubject(item.subject),
     studyMinutes:
@@ -207,6 +213,7 @@ export async function updateTodo(
   if (typeof patch.studyMinutes === 'number') payload.actualMinutes = patch.studyMinutes;
   if (patch.dueDate) payload.targetDate = patch.dueDate;
   if (patch.type) payload.type = toApiType(patch.type);
+  if (patch.feedback !== undefined) payload.feedback = patch.feedback;
 
   if (Object.keys(payload).length === 0) {
     return null;
