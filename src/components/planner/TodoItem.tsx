@@ -20,6 +20,7 @@ export default function TodoItem({
   variant = 'default',
 }: Props) {
   const isDone = todo.status === 'DONE';
+  const todoType = todo.type ?? (todo.isFixed ? '과제' : '학습');
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(todo.title);
   const [draftSubject, setDraftSubject] = useState<TodoSubject>(todo.subject);
@@ -59,7 +60,7 @@ export default function TodoItem({
               {todo.title}
             </Link>
             <span className="text-[10px] font-semibold text-purple-500">
-              {todo.isFixed ? '과제' : '학습'}
+              {todoType}
             </span>
           </div>
           <Link

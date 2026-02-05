@@ -1,5 +1,5 @@
 import { apiFetch } from '@/src/services/appClient';
-import type { Todo, TodoStatus, TodoSubject } from '@/src/lib/types/planner';
+import type { Todo, TodoStatus, TodoSubject, TodoType } from '@/src/lib/types/planner';
 import * as mockApi from '@/src/services/todo.mock';
 
 export type CreateTodoInput = {
@@ -7,13 +7,15 @@ export type CreateTodoInput = {
   subject: TodoSubject;
   dueDate: string; // YYYY-MM-DD
   dueTime: string; // HH:mm
+  type: TodoType;
 };
 
 export type UpdateTodoInput = Partial<
-  Pick<Todo, 'title' | 'subject' | 'status' | 'studyMinutes' | 'dueDate' | 'dueTime'>
+  Pick<Todo, 'title' | 'subject' | 'status' | 'studyMinutes' | 'dueDate' | 'dueTime' | 'type'>
 >;
 
 type TodoApiSubject = 'KOREAN' | 'ENGLISH' | 'MATH' | string;
+type TodoApiType = 'TASK' | 'ASSIGNMENT' | 'HOMEWORK' | 'STUDY' | string;
 
 type TodoApiItem = {
   todoItemId: number;
@@ -21,7 +23,7 @@ type TodoApiItem = {
   targetDate: string;
   title: string;
   subject: TodoApiSubject;
-  type?: string;
+  type?: TodoApiType;
   isFixed: boolean;
   status?: string;
   plannedMinutes?: number;
@@ -37,7 +39,7 @@ type CreateTodoApiRequest = {
   targetDate: string;
   plannerId?: number;
   plannedMinutes?: number;
-  type?: string;
+  type?: TodoApiType;
 };
 
 type UpdateTodoApiRequest = Partial<CreateTodoApiRequest> & {
@@ -62,12 +64,39 @@ const SUBJECT_TO_API: Record<TodoSubject, TodoApiSubject> = {
   수학: 'MATH',
 };
 
+const TYPE_FROM_API: Record<string, TodoType> = {
+  TASK: '과제',
+  ASSIGNMENT: '과제',
+  HOMEWORK: '과제',
+  STUDY: '학습',
+  과제: '과제',
+  학습: '학습',
+};
+
+const TYPE_TO_API: Record<TodoType, TodoApiType> = {
+  과제: 'TASK',
+  학습: 'STUDY',
+};
+
 function toTodoSubject(subject?: string): TodoSubject {
   return SUBJECT_FROM_API[subject ?? ''] ?? '국어';
 }
 
 function toApiSubject(subject: TodoSubject): TodoApiSubject {
   return SUBJECT_TO_API[subject] ?? 'KOREAN';
+}
+
+function toTodoType(type?: string, isFixed?: boolean): TodoType {
+  if (type) {
+    const normalized = type.toUpperCase();
+    if (TYPE_FROM_API[normalized]) return TYPE_FROM_API[normalized];
+    if (TYPE_FROM_API[type]) return TYPE_FROM_API[type];
+  }
+  return isFixed ? '과제' : '학습';
+}
+
+function toApiType(type: TodoType): TodoApiType {
+  return TYPE_TO_API[type] ?? 'STUDY';
 }
 
 function toTodoStatus(status?: string, completedAt?: string | null): TodoStatus {
@@ -100,6 +129,7 @@ function mapTodoFromApi(item: TodoApiItem): Todo {
     id: String(item.todoItemId),
     title: item.title ?? '',
     isFixed: item.isFixed ?? false,
+    type: toTodoType(item.type, item.isFixed),
     status: toTodoStatus(item.status, item.completedAt ?? null),
     subject: toTodoSubject(item.subject),
     studyMinutes:
@@ -150,6 +180,7 @@ export async function createTodo(input: CreateTodoInput): Promise<Todo> {
     title: input.title,
     subject: toApiSubject(input.subject),
     targetDate: input.dueDate,
+    type: toApiType(input.type),
   };
 
   const plannerId = resolvePlannerId();
@@ -175,6 +206,7 @@ export async function updateTodo(
   if (patch.status) payload.status = toApiStatus(patch.status);
   if (typeof patch.studyMinutes === 'number') payload.actualMinutes = patch.studyMinutes;
   if (patch.dueDate) payload.targetDate = patch.dueDate;
+  if (patch.type) payload.type = toApiType(patch.type);
 
   if (Object.keys(payload).length === 0) {
     return null;

@@ -1,22 +1,15 @@
 "use client";
 
 import Link from 'next/link';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { usePlannerStore } from '@/src/store/plannerStore';
+import { useTodosQuery } from '@/src/hooks/todoQueries';
 
 export default function CalendarSummary() {
   const selectedDate = usePlannerStore((s) => s.selectedDate);
-  const todos = usePlannerStore((s) => s.todos);
-  const hasLoadedTodos = usePlannerStore((s) => s.hasLoadedTodos);
-  const loadTodos = usePlannerStore((s) => s.loadTodos);
-
-  useEffect(() => {
-    if (!hasLoadedTodos) {
-      void loadTodos();
-    }
-  }, [hasLoadedTodos, loadTodos]);
+  const { data: todos = [] } = useTodosQuery();
 
   const monthLabel = useMemo(
     () => format(new Date(selectedDate), 'yyyy년 M월', { locale: ko }),

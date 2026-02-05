@@ -1,32 +1,44 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import {
+  useCreateTodoMutation,
+  useTodosQuery,
+  useUpdateTodoMutation,
+} from '@/src/hooks/todoQueries';
 import { usePlannerStore } from '@/src/store/plannerStore';
-import type { TodoSubject } from '@/src/lib/types/planner';
+import type { TodoSubject, TodoType } from '@/src/lib/types/planner';
 import TodoItem from './TodoItem';
 
+type SubjectFilter = '전체' | TodoSubject;
+
 export default function TodoList() {
-  const { todos, addTodo, toggleTodo, selectedDate, hasLoadedTodos, loadTodos } =
-    usePlannerStore();
+  const selectedDate = usePlannerStore((s) => s.selectedDate);
+  const { data: todos = [] } = useTodosQuery();
+  const createTodoMutation = useCreateTodoMutation();
+  const updateTodoMutation = useUpdateTodoMutation();
+
+  const toggleTodo = (id: string) => {
+    const current = todos.find((todo) => todo.id === id);
+    if (!current) return;
+    const nextStatus = current.status === 'DONE' ? 'TODO' : 'DONE';
+    updateTodoMutation.mutate({ id, patch: { status: nextStatus } });
+  };
 
   const [title, setTitle] = useState('');
   const [subject, setSubjectState] = useState<TodoSubject>('국어');
+  const [todoType, setTodoType] = useState<TodoType>('학습');
   const [dueDate, setDueDate] = useState(selectedDate);
   const [dueTime, setDueTime] = useState('23:59');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState('');
-  const [activeSubject, setActiveSubject] = useState<TodoSubject>('수학');
+  const [activeSubject, setActiveSubject] = useState<SubjectFilter>('전체');
   const [activeType, setActiveType] = useState<'전체' | '과제' | '학습'>('전체');
-
-  useEffect(() => {
-    if (!hasLoadedTodos) {
-      void loadTodos();
-    }
-  }, [hasLoadedTodos, loadTodos]);
 
   const openModal = () => {
     setTitle('');
     setSubjectState('국어');
+    setTodoType('학습');
     setDueDate(selectedDate);
     setDueTime('23:59');
     setError('');
@@ -49,11 +61,13 @@ export default function TodoList() {
       setError('마감 날짜와 시간을 선택해 주세요.');
       return;
     }
-    addTodo(trimmed, subject, dueDate, dueTime);
-    closeModal();
+    createTodoMutation.mutate(
+      { title: trimmed, subject, dueDate, dueTime, type: todoType },
+      { onSuccess: () => closeModal() }
+    );
   };
 
-  const subjects: TodoSubject[] = ['국어', '수학', '영어'];
+  const subjects: SubjectFilter[] = ['전체', '국어', '수학', '영어'];
 
   const todayTodos = useMemo(
     () => todos.filter((todo) => todo.dueDate === selectedDate),
@@ -61,19 +75,19 @@ export default function TodoList() {
   );
 
   const filteredTodos = useMemo(() => {
-    let items = todayTodos.filter((todo) => todo.subject === activeSubject);
-    if (activeType === '과제') {
-      items = items.filter((todo) => todo.isFixed);
+    let items = todayTodos;
+    if (activeSubject !== '전체') {
+      items = items.filter((todo) => todo.subject === activeSubject);
     }
-    if (activeType === '학습') {
-      items = items.filter((todo) => !todo.isFixed);
+    if (activeType !== '전체') {
+      items = items.filter((todo) => (todo.type ?? (todo.isFixed ? '과제' : '학습')) === activeType);
     }
     return items;
   }, [todayTodos, activeSubject, activeType]);
 
   return (
     <section className="space-y-5">
-      <div className="flex items-center">
+      <div className="flex items-center justify-center">
         <div className="rounded-full bg-neutral-100 p-1">
           <div className="flex items-center gap-1 text-xs font-semibold text-neutral-500">
             {subjects.map((item) => {
@@ -166,6 +180,30 @@ export default function TodoList() {
                   placeholder="할 일을 입력하세요"
                   className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-neutral-400"
                 />
+              </div>
+
+              <div className="grid gap-2">
+                <label className="text-xs font-semibold text-neutral-600">유형</label>
+                <div className="flex gap-2">
+                  {(['과제', '학습'] as const).map((type) => {
+                    const active = todoType === type;
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setTodoType(type)}
+                        className={[
+                          'flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition',
+                          active
+                            ? 'border-neutral-900 bg-neutral-900 text-white'
+                            : 'border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800',
+                        ].join(' ')}
+                      >
+                        {type}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="grid gap-2">

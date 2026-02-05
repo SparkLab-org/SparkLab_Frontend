@@ -1,20 +1,12 @@
 "use client";
 
 import Link from 'next/link';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { format, subDays } from 'date-fns';
-import { usePlannerStore } from '@/src/store/plannerStore';
+import { useTodosQuery } from '@/src/hooks/todoQueries';
 
 export default function YesterdayFeedbackSummary() {
-  const todos = usePlannerStore((s) => s.todos);
-  const hasLoadedTodos = usePlannerStore((s) => s.hasLoadedTodos);
-  const loadTodos = usePlannerStore((s) => s.loadTodos);
-
-  useEffect(() => {
-    if (!hasLoadedTodos) {
-      void loadTodos();
-    }
-  }, [hasLoadedTodos, loadTodos]);
+  const { data: todos = [] } = useTodosQuery();
 
   const yesterdayKey = useMemo(
     () => format(subDays(new Date(), 1), 'yyyy-MM-dd'),

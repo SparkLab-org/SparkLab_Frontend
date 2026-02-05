@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import {
   addDays,
   addMonths,
@@ -16,9 +16,13 @@ import { ko } from "date-fns/locale";
 import PlannerViewToggle from "./PlannerViewToggle";
 import PlannerDateGrid from "./PlannerDateGrid";
 import { usePlannerStore } from "@/src/store/plannerStore";
-import TodoItem from "@/src/components/task/TodoItem";
-
-type Dot = "green" | "pink";
+import TodoItem from "@/src/components/planner/TodoItem";
+import type { TodoSubject } from "@/src/lib/types/planner";
+import {
+  useDeleteTodoMutation,
+  useTodosQuery,
+  useUpdateTodoMutation,
+} from "@/src/hooks/todoQueries";
 
 /** ✅ 일요일 시작 월간 그리드(6x7=42칸) 생성 */
 function buildMonthGrid(selectedDate: Date) {
@@ -37,25 +41,35 @@ export default function PlannerCalendar({}: Props) {
   const selectedDateStr = usePlannerStore((s) => s.selectedDate);
   const selectedDate = useMemo(() => new Date(selectedDateStr), [selectedDateStr]);
   const setSelectedDate = usePlannerStore((s) => s.setSelectedDate);
-  const todos = usePlannerStore((s) => s.todos);
-  const hasLoadedTodos = usePlannerStore((s) => s.hasLoadedTodos);
-  const loadTodos = usePlannerStore((s) => s.loadTodos);
-  const toggleTodo = usePlannerStore((s) => s.toggleTodo);
-  const removeTodo = usePlannerStore((s) => s.removeTodo);
-  const updateTodo = usePlannerStore((s) => s.updateTodo);
+  const { data: todos = [] } = useTodosQuery();
+  const updateTodoMutation = useUpdateTodoMutation();
+  const deleteTodoMutation = useDeleteTodoMutation();
 
-  useEffect(() => {
-    if (!hasLoadedTodos) {
-      void loadTodos();
-    }
-  }, [hasLoadedTodos, loadTodos]);
+  const toggleTodo = (id: string) => {
+    const current = todos.find((todo) => todo.id === id);
+    if (!current) return;
+    const nextStatus = current.status === "DONE" ? "TODO" : "DONE";
+    updateTodoMutation.mutate({ id, patch: { status: nextStatus } });
+  };
+
+  const removeTodo = (id: string) => {
+    const current = todos.find((todo) => todo.id === id);
+    if (!current) return;
+    if (current.isFixed) return;
+    deleteTodoMutation.mutate(id);
+  };
+
+  const updateTodo = (id: string, title: string, subject: TodoSubject) => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    updateTodoMutation.mutate({ id, patch: { title: trimmed, subject } });
+  };
 
   /** ✅ 주간 7일 */
   const weekStart = useMemo(
     () => startOfWeek(selectedDate, { weekStartsOn: 0 }),
     [selectedDate]
   );
-  const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
     [weekStart]
@@ -72,16 +86,23 @@ export default function PlannerCalendar({}: Props) {
     return format(selectedDate, "M월 d일(EEE)", { locale: ko });
   }, [selectedDate]);
 
-  /** ✅ 날짜별 점(상태) - 투두 기반 */
-  const dotsByDate: Record<string, Dot[]> = useMemo(() => {
-    return todos.reduce<Record<string, Dot[]>>((acc, todo) => {
+  /** ✅ 날짜별 성취도(완료율) - 투두 기반 */
+  const progressByDate: Record<string, number> = useMemo(() => {
+    const counts = todos.reduce<Record<string, { total: number; done: number }>>((acc, todo) => {
       if (!todo.dueDate) return acc;
-      const dot: Dot = todo.status === "DONE" ? "green" : "pink";
-      acc[todo.dueDate] = acc[todo.dueDate]
-        ? [...acc[todo.dueDate], dot]
-        : [dot];
+      const current = acc[todo.dueDate] ?? { total: 0, done: 0 };
+      current.total += 1;
+      if (todo.status === 'DONE') current.done += 1;
+      acc[todo.dueDate] = current;
       return acc;
     }, {});
+
+    return Object.fromEntries(
+      Object.entries(counts).map(([date, { total, done }]) => [
+        date,
+        total > 0 ? done / total : 0,
+      ])
+    );
   }, [todos]);
 
   const selectedTodos = useMemo(() => {
@@ -157,7 +178,7 @@ export default function PlannerCalendar({}: Props) {
             onSelectDate={(d) => setSelectedDate(d)}
             weekDays={weekDays}
             monthCells={monthCells}
-            dotsByDate={dotsByDate}
+            progressByDate={progressByDate}
             itemsByDate={itemsByDate}
           />
         </div>

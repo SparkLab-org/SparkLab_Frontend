@@ -1,22 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { usePlannerStore } from '@/src/store/plannerStore';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { useTodosQuery } from '@/src/hooks/todoQueries';
 
 export default function TodayTodoSummary() {
-  const todos = usePlannerStore((s) => s.todos);
   const selectedDate = usePlannerStore((s) => s.selectedDate);
-  const hasLoadedTodos = usePlannerStore((s) => s.hasLoadedTodos);
-  const loadTodos = usePlannerStore((s) => s.loadTodos);
-
-  useEffect(() => {
-    if (!hasLoadedTodos) {
-      void loadTodos();
-    }
-  }, [hasLoadedTodos, loadTodos]);
+  const { data: todos = [] } = useTodosQuery();
 
   const todayTodos = useMemo(() => {
     return todos

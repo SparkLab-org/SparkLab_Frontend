@@ -1,14 +1,15 @@
-import type { Todo, TodoSubject } from '@/src/lib/types/planner';
+import type { Todo, TodoSubject, TodoType } from '@/src/lib/types/planner';
 
 export type CreateTodoInput = {
   title: string;
   subject: TodoSubject;
   dueDate: string; // YYYY-MM-DD
   dueTime: string; // HH:mm
+  type: TodoType;
 };
 
 export type UpdateTodoInput = Partial<
-  Pick<Todo, 'title' | 'subject' | 'status' | 'studyMinutes' | 'dueDate' | 'dueTime'>
+  Pick<Todo, 'title' | 'subject' | 'status' | 'studyMinutes' | 'dueDate' | 'dueTime' | 'type'>
 >;
 
 const STORAGE_KEY = 'mock-todos';
@@ -32,6 +33,7 @@ const seedTodos: Todo[] = [
     isFixed: true,
     status: 'TODO',
     subject: '수학',
+    type: '과제',
     studyMinutes: 0,
     createdAt: Date.now(),
     dueDate: todayISO(),
@@ -43,6 +45,7 @@ const seedTodos: Todo[] = [
     isFixed: true,
     status: 'TODO',
     subject: '영어',
+    type: '과제',
     studyMinutes: 0,
     createdAt: Date.now(),
     dueDate: todayISO(),
@@ -54,6 +57,7 @@ const seedTodos: Todo[] = [
     isFixed: false,
     status: 'DONE',
     subject: '국어',
+    type: '학습',
     studyMinutes: 20,
     createdAt: Date.now(),
     dueDate: todayISO(),
@@ -99,6 +103,7 @@ export async function createTodo(input: CreateTodoInput): Promise<Todo> {
     isFixed: false,
     status: 'TODO',
     subject: input.subject,
+    type: input.type,
     studyMinutes: 0,
     createdAt: Date.now(),
     dueDate: input.dueDate,

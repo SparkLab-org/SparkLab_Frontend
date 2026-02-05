@@ -1,9 +1,8 @@
 'use client';
 
-import { format, isSameDay, isSameMonth, startOfMonth, endOfMonth, startOfWeek, addDays } from 'date-fns';
+import { format, isSameDay, isSameMonth } from 'date-fns';
 
 type View = 'week' | 'month';
-type Dot = 'green' | 'pink';
 type TodoSummary = { title: string; status: string };
 
 type Props = {
@@ -14,7 +13,7 @@ type Props = {
   weekDays: Date[];
   monthCells: Date[];
 
-  dotsByDate: Record<string, Dot[]>;
+  progressByDate?: Record<string, number>;
   itemsByDate?: Record<string, TodoSummary[]>;
 };
 
@@ -28,7 +27,7 @@ export default function PlannerDateGrid({
   onSelectDate,
   weekDays,
   monthCells,
-  dotsByDate,
+  progressByDate,
   itemsByDate,
 }: Props) {
   const days = view === 'week' ? weekDays : monthCells;
@@ -39,7 +38,10 @@ export default function PlannerDateGrid({
         const key = isoDate(d);
         const isSelected = isSameDay(d, selectedDate);
         const inMonth = view === 'month' ? isSameMonth(d, selectedDate) : true;
-        const dots = dotsByDate[key] ?? [];
+        const progress = progressByDate?.[key];
+        const hasProgress =
+          !!progressByDate && Object.prototype.hasOwnProperty.call(progressByDate, key);
+        const isComplete = typeof progress === 'number' && progress >= 1;
         const items = view === 'month' ? itemsByDate?.[key] ?? [] : [];
 
         return (
@@ -97,17 +99,28 @@ export default function PlannerDateGrid({
               </div>
             )}
 
-            {view === 'week' && dots.length > 0 && (
-              <div className="absolute -bottom-2 flex gap-1">
-                {dots.slice(0, 3).map((dot, idx) => (
-                  <span
-                    key={idx}
+            {view === 'week' && hasProgress && typeof progress === 'number' && (
+              <div className="absolute -bottom-2 left-1/2 w-10 -translate-x-1/2">
+                <div
+                  className={[
+                    'h-1.5 w-full overflow-hidden rounded-full',
+                    isSelected ? 'bg-white/30' : 'bg-neutral-300',
+                  ].join(' ')}
+                >
+                  <div
                     className={[
-                      'h-1.5 w-1.5 rounded-full',
-                      dot === 'green' ? 'bg-emerald-400' : 'bg-purple-400',
+                      'h-full',
+                      isSelected
+                        ? isComplete
+                          ? 'bg-emerald-200'
+                          : 'bg-purple-200'
+                        : isComplete
+                        ? 'bg-emerald-400'
+                        : 'bg-purple-400',
                     ].join(' ')}
+                    style={{ width: `${Math.round(progress * 100)}%` }}
                   />
-                ))}
+                </div>
               </div>
             )}
           </button>

@@ -1,4 +1,4 @@
-import PlannerCalendar from '@/src/components/planner/PlannerCalendar';
+import PlannerCalendar from '@/src/components/calendar/PlannerCalendar';
 
 export default function CalendarPage() {
   return <PlannerCalendar />;
