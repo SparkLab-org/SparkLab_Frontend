@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   addDays,
   addMonths,
@@ -38,9 +38,17 @@ export default function PlannerCalendar({}: Props) {
   const selectedDate = useMemo(() => new Date(selectedDateStr), [selectedDateStr]);
   const setSelectedDate = usePlannerStore((s) => s.setSelectedDate);
   const todos = usePlannerStore((s) => s.todos);
+  const hasLoadedTodos = usePlannerStore((s) => s.hasLoadedTodos);
+  const loadTodos = usePlannerStore((s) => s.loadTodos);
   const toggleTodo = usePlannerStore((s) => s.toggleTodo);
   const removeTodo = usePlannerStore((s) => s.removeTodo);
   const updateTodo = usePlannerStore((s) => s.updateTodo);
+
+  useEffect(() => {
+    if (!hasLoadedTodos) {
+      void loadTodos();
+    }
+  }, [hasLoadedTodos, loadTodos]);
 
   /** ✅ 주간 7일 */
   const weekDays = useMemo(() => {

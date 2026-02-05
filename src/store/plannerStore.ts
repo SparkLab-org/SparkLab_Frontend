@@ -18,6 +18,13 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Todo, TodoSubject } from '../lib/types/planner';
+import {
+  createTodo,
+  deleteTodo,
+  getTodoSnapshot,
+  listTodos,
+  updateTodo as updateTodoApi,
+} from '@/src/services/todo.api';
 
 /**
  * PlannerState
@@ -36,11 +43,17 @@ interface PlannerState {
   /** 현재 날짜에 해당하는 투두 목록 */
   todos: Todo[];
 
+  /** 투두 목록 초기 로드 여부 */
+  hasLoadedTodos: boolean;
+
   /** 날짜 변경 */
   setSelectedDate: (date: string | Date) => void;
 
   /** 플래너 뷰 변경 */
   setView: (view: PlannerView) => void;
+
+  /** 투두 목록 로드 */
+  loadTodos: () => Promise<void>;
 
   /** 멘티가 투두를 새로 추가 */
   addTodo: (title: string, subject: TodoSubject, dueDate: string, dueTime: string) => void;
@@ -73,61 +86,7 @@ function todayISO(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-/**
- * 🆔 간단한 uid 생성 함수
- *
- * - MVP 단계에서만 사용
- * - 새 투두를 클라이언트에서 추가할 때 id 생성용
- *
- * ⚠️ SSR 환경에서는 hydration mismatch를 유발할 수 있으므로
- * 초기 더미 데이터에는 사용하지 않고,
- * 실제 백엔드 연동 시에는 서버에서 내려준 id를 사용
- */
-function uid(): string {
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-/**
- * 🧪 초기 더미 투두 데이터
- *
- * - 서버 연동 전, 화면과 인터랙션 테스트용
- * - id는 hydration mismatch 방지를 위해 고정 문자열 사용
- */
-const initialTodos: Todo[] = [
-  {
-    id: 'seed-1',
-    title: '멘토 · 수학 문제집 30p',
-    isFixed: true, // 멘토 고정 투두
-    status: 'TODO',
-    subject: '수학',
-    studyMinutes: 0,
-    createdAt: Date.now(),
-    dueDate: todayISO(),
-    dueTime: '23:59',
-  },
-  {
-    id: 'seed-2',
-    title: '멘토 · 영어 단어 2회독',
-    isFixed: true,
-    status: 'TODO',
-    subject: '영어',
-    studyMinutes: 0,
-    createdAt: Date.now(),
-    dueDate: todayISO(),
-    dueTime: '21:00',
-  },
-  {
-    id: 'seed-3',
-    title: '내가 추가 · 과학 요약',
-    isFixed: false, // 멘티가 직접 추가한 투두
-    status: 'DONE',
-    subject: '국어',
-    studyMinutes: 20,
-    createdAt: Date.now(),
-    dueDate: todayISO(),
-    dueTime: '18:30',
-  },
-];
+const initialTodos = getTodoSnapshot();
 
 /**
  * 🧠 usePlannerStore
@@ -146,12 +105,22 @@ export const usePlannerStore = create<PlannerState>()(
       /** 현재 날짜의 투두 목록 */
       todos: initialTodos,
 
+      /** 투두 목록 초기 로드 여부 */
+      hasLoadedTodos: false,
+
       /** 날짜 변경 */
       setSelectedDate: (date) =>
         set({ selectedDate: typeof date === 'string' ? date : todayISOFrom(date) }),
 
       /** 뷰 변경 */
       setView: (view) => set({ view }),
+
+      /** 투두 목록 로드 */
+      loadTodos: async () => {
+        if (get().hasLoadedTodos) return;
+        const items = await listTodos();
+        set({ todos: items, hasLoadedTodos: true });
+      },
 
       /**
        * ➕ 투두 추가
@@ -164,20 +133,14 @@ export const usePlannerStore = create<PlannerState>()(
         const timeValue = dueTime.trim();
         if (!trimmed || !dateValue || !timeValue) return;
 
-        const newTodo: Todo = {
-          id: uid(),
+        void createTodo({
           title: trimmed,
-          isFixed: false,
-          status: 'TODO',
           subject,
-          studyMinutes: 0,
-          createdAt: Date.now(),
           dueDate: dateValue,
           dueTime: timeValue,
-        };
-
-        // 최신 투두가 위로 오도록 앞에 추가
-        set({ todos: [newTodo, ...get().todos] });
+        }).then((created) => {
+          set({ todos: [created, ...get().todos], hasLoadedTodos: true });
+        });
       },
 
       /**
@@ -189,19 +152,23 @@ export const usePlannerStore = create<PlannerState>()(
         if (!todo) return;
         if (todo.isFixed) return;
 
-        set({ todos: get().todos.filter((t) => t.id !== id) });
+        void deleteTodo(id).then(() => {
+          set({ todos: get().todos.filter((t) => t.id !== id) });
+        });
       },
 
       /**
        * ✅ 투두 완료 / 미완료 토글
        */
       toggleTodo: (id) => {
-        set({
-          todos: get().todos.map((t) =>
-            t.id === id
-              ? { ...t, status: t.status === 'DONE' ? 'TODO' : 'DONE' }
-              : t
-          ),
+        const current = get().todos.find((t) => t.id === id);
+        if (!current) return;
+        const nextStatus = current.status === 'DONE' ? 'TODO' : 'DONE';
+        void updateTodoApi(id, { status: nextStatus }).then((updated) => {
+          if (!updated) return;
+          set({
+            todos: get().todos.map((t) => (t.id === id ? updated : t)),
+          });
         });
       },
 
@@ -214,10 +181,11 @@ export const usePlannerStore = create<PlannerState>()(
           ? Math.max(0, Math.min(1440, minutes))
           : 0;
 
-        set({
-          todos: get().todos.map((t) =>
-            t.id === id ? { ...t, studyMinutes: safe } : t
-          ),
+        void updateTodoApi(id, { studyMinutes: safe }).then((updated) => {
+          if (!updated) return;
+          set({
+            todos: get().todos.map((t) => (t.id === id ? updated : t)),
+          });
         });
       },
 
@@ -225,10 +193,11 @@ export const usePlannerStore = create<PlannerState>()(
        * 📚 과목 변경
        */
       setSubject: (id, subject) => {
-        set({
-          todos: get().todos.map((t) =>
-            t.id === id ? { ...t, subject } : t
-          ),
+        void updateTodoApi(id, { subject }).then((updated) => {
+          if (!updated) return;
+          set({
+            todos: get().todos.map((t) => (t.id === id ? updated : t)),
+          });
         });
       },
 
@@ -238,10 +207,11 @@ export const usePlannerStore = create<PlannerState>()(
       updateTodo: (id, title, subject) => {
         const trimmed = title.trim();
         if (!trimmed) return;
-        set({
-          todos: get().todos.map((t) =>
-            t.id === id ? { ...t, title: trimmed, subject } : t
-          ),
+        void updateTodoApi(id, { title: trimmed, subject }).then((updated) => {
+          if (!updated) return;
+          set({
+            todos: get().todos.map((t) => (t.id === id ? updated : t)),
+          });
         });
       },
     }),

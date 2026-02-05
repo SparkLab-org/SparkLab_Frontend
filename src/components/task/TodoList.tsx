@@ -1,13 +1,21 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePlannerStore } from '@/src/store/plannerStore';
 import type { TodoSubject } from '@/src/lib/types/planner';
 import TodoItem from './TodoItem';
 
 export default function TodoList() {
-  const { todos, addTodo, toggleTodo, removeTodo, updateTodo, selectedDate } =
-    usePlannerStore();
+  const {
+    todos,
+    addTodo,
+    toggleTodo,
+    removeTodo,
+    updateTodo,
+    selectedDate,
+    hasLoadedTodos,
+    loadTodos,
+  } = usePlannerStore();
 
   const [title, setTitle] = useState('');
   const [subject, setSubjectState] = useState<TodoSubject>('국어');
@@ -20,6 +28,12 @@ export default function TodoList() {
     () => todos.reduce((acc, t) => acc + (t.studyMinutes || 0), 0),
     [todos]
   );
+
+  useEffect(() => {
+    if (!hasLoadedTodos) {
+      void loadTodos();
+    }
+  }, [hasLoadedTodos, loadTodos]);
 
   const doneCount = useMemo(() => todos.filter((t) => t.status === 'DONE').length, [todos]);
 

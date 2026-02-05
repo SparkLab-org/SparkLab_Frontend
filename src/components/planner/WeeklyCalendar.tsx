@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { addDays, addWeeks, format, startOfWeek, subWeeks } from "date-fns";
 import { ko } from "date-fns/locale";
 
@@ -17,12 +17,20 @@ export default function WeeklyCalendar({}: Props) {
   const selectedDate = useMemo(() => new Date(selectedDateStr), [selectedDateStr]);
   const setSelectedDate = usePlannerStore((s) => s.setSelectedDate);
   const todos = usePlannerStore((s) => s.todos);
+  const hasLoadedTodos = usePlannerStore((s) => s.hasLoadedTodos);
+  const loadTodos = usePlannerStore((s) => s.loadTodos);
 
   const weekStart = useMemo(
     () => startOfWeek(selectedDate, { weekStartsOn: 0 }),
     [selectedDate]
   );
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
+
+  useEffect(() => {
+    if (!hasLoadedTodos) {
+      void loadTodos();
+    }
+  }, [hasLoadedTodos, loadTodos]);
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));

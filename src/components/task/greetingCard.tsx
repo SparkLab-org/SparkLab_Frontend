@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo } from 'react';
 
 // 현재 날짜 계산 로직
@@ -37,27 +38,12 @@ export default function GreetingCard() {
           </p>
 
           {/* 버튼은 줄바꿈 금지 + 최소 폭 + shrink 방지 */}
-          <button
-            type="button"
+          <Link
+            href="/question"
             className="shrink-0 self-start rounded-2xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white sm:self-auto"
           >
             질문하기
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 text-sm font-semibold text-neutral-600">
-          <button
-            type="button"
-            className="rounded-2xl bg-neutral-100 px-4 py-3 shadow-sm ring-1 ring-neutral-200"
-          >
-            계획표
-          </button>
-          <button
-            type="button"
-            className="rounded-2xl bg-neutral-100 px-4 py-3 shadow-sm ring-1 ring-neutral-200"
-          >
-            성취도
-          </button>
+          </Link>
         </div>
       </div>
     </section>
