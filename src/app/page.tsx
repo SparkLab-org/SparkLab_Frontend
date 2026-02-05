@@ -45,7 +45,7 @@ export default function Home() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Link
-                href="/task"
+                href="/planner"
                 className="inline-flex items-center justify-center rounded-full bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
               >
                 로그인 없이 멘티 화면 둘러보기

@@ -19,13 +19,7 @@ export default function GreetingCard() {
   const todayText = useMemo(() => formatKoreanDate(new Date()), []);
 
   return (
-    <section
-      className="rounded-3xl p-5 shadow-sm ring-1 ring-neutral-100"
-      style={{
-        background:
-          'linear-gradient(180deg, rgba(245, 245, 245, 0) 46.7%, #F5F5F5 100%)',
-      }}
-    >
+    <section>
       <div className="flex items-start justify-between">
         <p className="text-2xl font-semibold text-neutral-900">{todayText}</p>
       </div>
@@ -33,13 +27,13 @@ export default function GreetingCard() {
       <div className="mt-5 space-y-5">
         {/* iPhone에서 버튼과 문구가 겹치지 않게: 기본은 세로, sm부터 가로 */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-lg font-semibold leading-snug text-neutral-900 whitespace-pre-line">
+          <p className="text-2xl font-semibold leading-snug text-neutral-900 whitespace-pre-line">
             학습 중 어려웠던{'\n'}부분을 질문해보세요
           </p>
 
           {/* 버튼은 줄바꿈 금지 + 최소 폭 + shrink 방지 */}
           <Link
-            href="/question"
+            href="planner/question"
             className="shrink-0 self-start rounded-2xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white sm:self-auto"
           >
             질문하기

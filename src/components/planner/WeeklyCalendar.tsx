@@ -63,11 +63,11 @@ export default function WeeklyCalendar({}: Props) {
 
   return (
     <section
-      className="rounded-3xl p-5 shadow-sm ring-1 ring-neutral-100"
-      style={{
-        background:
-          "linear-gradient(180deg, rgba(245, 245, 245, 0) 46.7%, #F5F5F5 100%)",
-      }}
+      className="rounded-3xl p-5 bg-[#F5F5F5]"
+      // style={{
+      //   background:
+      //     "linear-gradient(180deg, rgba(245, 245, 245, 0) 46.7%, #F5F5F5 100%)",
+      // }}
     >
       <div className="flex items-center justify-between gap-3 text-sm text-neutral-700">
         <button
@@ -93,7 +93,7 @@ export default function WeeklyCalendar({}: Props) {
         </button>
       </div>
 
-      <div className="mt-4 grid grid-cols-7 gap-2 text-center text-xs text-neutral-400">
+      <div className="mt-4 grid grid-cols-7 gap-2 text-center text-m text-neutral-400">
         {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
           <span key={d}>{d}</span>
         ))}
@@ -110,7 +110,7 @@ export default function WeeklyCalendar({}: Props) {
 
       <div className="mt-4 flex justify-end">
         <Link
-          href="/planner"
+          href="/planner/calendar"
           className="inline-flex items-center justify-center rounded-full bg-neutral-900 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5"
         >
           계획표 보기

@@ -29,15 +29,12 @@ export default function QuestionPage() {
     <div className="mx-auto max-w-md space-y-6">
       <header className="flex items-center justify-between text-xs font-semibold text-neutral-500">
         <span>플래너 · 질문</span>
-        <span className="rounded-md border border-neutral-200 px-2 py-1 text-[10px] text-neutral-500">
-          &lt;/&gt;
-        </span>
       </header>
 
       <section className="space-y-4 rounded-3xl border border-neutral-100 bg-white p-5 shadow-sm">
         <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
           <Link
-            href="/task"
+            href="/planner"
             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 text-neutral-600"
             aria-label="뒤로"
           >

@@ -62,7 +62,7 @@ export default function TodoItem({
               />
             ) : (
               <Link
-                href={`/task/${todo.id}`}
+                href={`/planner/${todo.id}`}
                 className={[
                   'truncate text-sm font-semibold',
                   isDone ? 'text-neutral-400 line-through' : 'text-neutral-900',

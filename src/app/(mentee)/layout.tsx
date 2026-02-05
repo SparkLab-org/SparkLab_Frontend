@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 const navItems = [
   { href: '/feedback', label: '피드백' },
-  { href: '/task', label: '플래너' },
+  { href: '/planner', label: '플래너' },
   { href: '/my', label: '마이페이지' },
 ];
 
