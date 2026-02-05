@@ -1,14 +1,12 @@
-'use client';
+"use client";
 
 import Link from 'next/link';
 import { useEffect, useMemo } from 'react';
+import { format, subDays } from 'date-fns';
 import { usePlannerStore } from '@/src/store/plannerStore';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 
-export default function TodayTodoSummary() {
+export default function YesterdayFeedbackSummary() {
   const todos = usePlannerStore((s) => s.todos);
-  const selectedDate = usePlannerStore((s) => s.selectedDate);
   const hasLoadedTodos = usePlannerStore((s) => s.hasLoadedTodos);
   const loadTodos = usePlannerStore((s) => s.loadTodos);
 
@@ -18,26 +16,24 @@ export default function TodayTodoSummary() {
     }
   }, [hasLoadedTodos, loadTodos]);
 
-  const todayTodos = useMemo(() => {
+  const yesterdayKey = useMemo(
+    () => format(subDays(new Date(), 1), 'yyyy-MM-dd'),
+    []
+  );
+
+  const yesterdayTodos = useMemo(() => {
     return todos
-      .filter((todo) => todo.dueDate === selectedDate)
+      .filter((todo) => todo.dueDate === yesterdayKey && todo.status === 'DONE')
       .slice()
       .sort((a, b) => a.dueTime.localeCompare(b.dueTime));
-  }, [todos, selectedDate]);
-
-  const titleText = useMemo(() => {
-    const todayKey = format(new Date(), 'yyyy-MM-dd');
-    if (selectedDate === todayKey) return '오늘의 할 일';
-    const dateLabel = format(new Date(selectedDate), 'M월 d일', { locale: ko });
-    return `${dateLabel} 할 일`;
-  }, [selectedDate]);
+  }, [todos, yesterdayKey]);
 
   return (
     <section className="space-y-3 rounded-3xl bg-[#F5F5F5] p-4">
       <div className="flex items-center justify-between">
-        <p className="text-lg font-bold text-neutral-900">{titleText}</p>
+        <p className="text-lg font-bold text-neutral-900">어제 피드백</p>
         <Link
-          href="/planner/list"
+          href="/feedback"
           className="inline-flex items-center gap-1 text-xs font-semibold text-neutral-500 hover:text-neutral-900"
         >
           이동하기
@@ -46,13 +42,13 @@ export default function TodayTodoSummary() {
       </div>
 
       <div className="grid gap-2">
-        {todayTodos.length === 0 && (
-          <div className="rounded-2xl px-3 py-3 text-center text-xs text-neutral-500">
-            등록된 할 일이 없어요.
+        {yesterdayTodos.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 px-3 py-3 text-center text-xs text-neutral-500">
+            어제 완료한 할 일이 없어요.
           </div>
         )}
 
-        {todayTodos.slice(0, 10).map((todo) => (
+        {yesterdayTodos.slice(0, 10).map((todo) => (
           <div
             key={todo.id}
             className="flex flex-row gap-2 rounded-xl bg-[#FFF] px-3 py-3 text-xs text-neutral-700"
@@ -62,15 +58,8 @@ export default function TodayTodoSummary() {
               <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-semibold text-white">
                 {todo.subject}
               </span>
-              <span
-                className={[
-                  'rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                  todo.status === 'DONE'
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-neutral-200 text-neutral-600',
-                ].join(' ')}
-              >
-                {todo.status === 'DONE' ? '완료' : '해야 함'}
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                완료
               </span>
             </div>
           </div>

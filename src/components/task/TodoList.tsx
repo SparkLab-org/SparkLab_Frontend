@@ -6,16 +6,8 @@ import type { TodoSubject } from '@/src/lib/types/planner';
 import TodoItem from './TodoItem';
 
 export default function TodoList() {
-  const {
-    todos,
-    addTodo,
-    toggleTodo,
-    removeTodo,
-    updateTodo,
-    selectedDate,
-    hasLoadedTodos,
-    loadTodos,
-  } = usePlannerStore();
+  const { todos, addTodo, toggleTodo, selectedDate, hasLoadedTodos, loadTodos } =
+    usePlannerStore();
 
   const [title, setTitle] = useState('');
   const [subject, setSubjectState] = useState<TodoSubject>('국어');
@@ -23,19 +15,14 @@ export default function TodoList() {
   const [dueTime, setDueTime] = useState('23:59');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState('');
-
-  const totalMinutes = useMemo(
-    () => todos.reduce((acc, t) => acc + (t.studyMinutes || 0), 0),
-    [todos]
-  );
+  const [activeSubject, setActiveSubject] = useState<TodoSubject>('수학');
+  const [activeType, setActiveType] = useState<'전체' | '과제' | '학습'>('전체');
 
   useEffect(() => {
     if (!hasLoadedTodos) {
       void loadTodos();
     }
   }, [hasLoadedTodos, loadTodos]);
-
-  const doneCount = useMemo(() => todos.filter((t) => t.status === 'DONE').length, [todos]);
 
   const openModal = () => {
     setTitle('');
@@ -66,31 +53,81 @@ export default function TodoList() {
     closeModal();
   };
 
-  const mentorTodos = todos.filter((t) => t.isFixed);
-  const menteeTodos = todos.filter((t) => !t.isFixed);
+  const subjects: TodoSubject[] = ['국어', '수학', '영어'];
+
+  const todayTodos = useMemo(
+    () => todos.filter((todo) => todo.dueDate === selectedDate),
+    [todos, selectedDate]
+  );
+
+  const filteredTodos = useMemo(() => {
+    let items = todayTodos.filter((todo) => todo.subject === activeSubject);
+    if (activeType === '과제') {
+      items = items.filter((todo) => todo.isFixed);
+    }
+    if (activeType === '학습') {
+      items = items.filter((todo) => !todo.isFixed);
+    }
+    return items;
+  }, [todayTodos, activeSubject, activeType]);
 
   return (
-    <section
-      className="space-y-4 rounded-[26px] border border-neutral-100 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
-      style={{
-        background: 'linear-gradient(180deg, rgba(245, 245, 245, 0) 46.7%, #F5F5F5 100%)',
-      }}
-    >
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-xl font-semibold text-neutral-800">오늘의 할 일</p>
-          <p className="mt-1 text-sm text-neutral-600">
-            완료 {doneCount}/{todos.length} · 총 {totalMinutes}분
-          </p>
+    <section className="space-y-5">
+      <div className="flex items-center">
+        <div className="rounded-full bg-neutral-100 p-1">
+          <div className="flex items-center gap-1 text-xs font-semibold text-neutral-500">
+            {subjects.map((item) => {
+              const active = activeSubject === item;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setActiveSubject(item)}
+                  className={[
+                    'rounded-full px-4 py-1.5 transition',
+                    active ? 'bg-black text-white' : 'hover:text-neutral-800',
+                  ].join(' ')}
+                >
+                  {item}
+                </button>
+              );
+            })}
+          </div>
         </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold text-neutral-900">오늘의 할일</h2>
         <button
           type="button"
           onClick={openModal}
-          className="rounded-full bg-neutral-900 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5"
+          className="inline-flex h-8 w-8 items-center justify-center text-3xl font-medium text-black"
+          aria-label="추가하기"
         >
-          추가하기
+          +
         </button>
-      </header>
+      </div>
+
+      <div className="flex items-center gap-2 text-xs font-semibold text-neutral-500">
+        {(['전체', '과제', '학습'] as const).map((item) => {
+          const active = activeType === item;
+          return (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setActiveType(item)}
+              className={[
+                'rounded-full px-3 py-1 transition',
+                active
+                  ? 'bg-black text-white'
+                  : 'border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800',
+              ].join(' ')}
+            >
+              {item}
+            </button>
+          );
+        })}
+      </div>
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
@@ -185,41 +222,22 @@ export default function TodoList() {
         </div>
       )}
 
-      <div className="space-y-3">
-        {mentorTodos.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-neutral-500">멘토</p>
-            <div className="grid gap-3">
-              {mentorTodos.map((t) => (
-                <TodoItem
-                  key={t.id}
-                  todo={t}
-                  onToggle={toggleTodo}
-                  onRemove={removeTodo}
-                  onUpdate={updateTodo}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {menteeTodos.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-neutral-500">멘티</p>
-            <div className="grid gap-3">
-              {menteeTodos.map((t) => (
-                <TodoItem
-                  key={t.id}
-                  todo={t}
-                  onToggle={toggleTodo}
-                  onRemove={removeTodo}
-                  onUpdate={updateTodo}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      {filteredTodos.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 px-4 py-6 text-center text-sm text-neutral-500">
+          등록된 할 일이 없어요.
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {filteredTodos.map((todo) => (
+            <TodoItem
+              key={todo.id}
+              todo={todo}
+              onToggle={toggleTodo}
+              variant="compact"
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

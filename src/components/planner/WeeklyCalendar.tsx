@@ -32,6 +32,11 @@ export default function WeeklyCalendar({}: Props) {
     }
   }, [hasLoadedTodos, loadTodos]);
 
+  useEffect(() => {
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    setSelectedDate(todayKey);
+  }, [setSelectedDate]);
+
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   }, [weekStart]);
@@ -64,33 +69,37 @@ export default function WeeklyCalendar({}: Props) {
   return (
     <section
       className="rounded-3xl p-5 bg-[#F5F5F5]"
-      // style={{
-      //   background:
-      //     "linear-gradient(180deg, rgba(245, 245, 245, 0) 46.7%, #F5F5F5 100%)",
-      // }}
     >
       <div className="flex items-center justify-between gap-3 text-sm text-neutral-700">
-        <button
+        {/* <button
           type="button"
           aria-label="이전 주"
           className="rounded-full px-2 py-1 text-neutral-600"
           onClick={goPrev}
         >
           ←
-        </button>
+        </button> */}
 
         <div className="text-center">
-          <p className="text-m font-semibold text-neutral-900">{headerText}</p>
+          <p className="text-lg font-bold text-neutral-900">계획표</p>
         </div>
 
-        <button
+        {/* <button
           type="button"
           aria-label="다음 주"
           className="rounded-full px-2 py-1 text-neutral-600"
           onClick={goNext}
         >
           →
-        </button>
+        </button> */}
+        
+        <Link
+          href="/planner/calendar"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-neutral-500 hover:text-neutral-900"
+        >
+          이동하기
+          <span aria-hidden>›</span>
+        </Link>
       </div>
 
       <div className="mt-4 grid grid-cols-7 gap-2 text-center text-m text-neutral-400">
@@ -108,14 +117,7 @@ export default function WeeklyCalendar({}: Props) {
         dotsByDate={dotsByDate}
       />
 
-      <div className="mt-4 flex justify-end">
-        <Link
-          href="/planner/calendar"
-          className="inline-flex items-center justify-center rounded-full bg-neutral-900 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5"
-        >
-          계획표 보기
-        </Link>
-      </div>
+      
     </section>
   );
 }

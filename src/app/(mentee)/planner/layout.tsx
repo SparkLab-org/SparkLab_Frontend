@@ -1,0 +1,37 @@
+'use client';
+
+import { usePathname, useRouter } from 'next/navigation';
+
+function getPageTitle(pathname: string) {
+  if (pathname.startsWith('/planner/calendar')) return '계획표';
+  if (pathname.startsWith('/planner/list')) return '오늘의 할일';
+  if (pathname.startsWith('/planner/question')) return '질문';
+  if (pathname.startsWith('/planner/')) return '할 일';
+  return '';
+}
+
+export default function PlannerLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const showHeader = pathname !== '/planner';
+  const title = getPageTitle(pathname);
+
+  return (
+    <div className="space-y-4">
+      {showHeader && (
+        <header className="flex items-center gap-2 text-l font-semibold text-neutral-900">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="inline-flex h-8 w-8 items-center justify-center text-l text-neutral-600"
+            aria-label="뒤로"
+          >
+            &lt;
+          </button>
+          <span>{title}</span>
+        </header>
+      )}
+      {children}
+    </div>
+  );
+}

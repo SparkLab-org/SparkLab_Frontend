@@ -7,8 +7,9 @@ import type { Todo, TodoSubject } from '@/src/lib/types/planner';
 type Props = {
   todo: Todo;
   onToggle: (id: string) => void;
-  onRemove: (id: string) => void;
-  onUpdate: (id: string, title: string, subject: TodoSubject) => void;
+  onRemove?: (id: string) => void;
+  onUpdate?: (id: string, title: string, subject: TodoSubject) => void;
+  variant?: 'default' | 'compact';
 };
 
 export default function TodoItem({
@@ -16,6 +17,7 @@ export default function TodoItem({
   onToggle,
   onRemove,
   onUpdate,
+  variant = 'default',
 }: Props) {
   const isDone = todo.status === 'DONE';
   const [editing, setEditing] = useState(false);
@@ -23,9 +25,57 @@ export default function TodoItem({
   const [draftSubject, setDraftSubject] = useState<TodoSubject>(todo.subject);
 
   const save = () => {
+    if (!onUpdate) return;
     onUpdate(todo.id, draftTitle, draftSubject);
     setEditing(false);
   };
+
+  if (variant === 'compact') {
+    return (
+      <div className="rounded-3xl bg-[#F5F5F5] p-4 shadow-sm ring-1 ring-neutral-100">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <label
+              className={[
+                'flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg border text-[10px] font-semibold',
+                isDone
+                  ? 'border-neutral-900 bg-neutral-900 text-white'
+                  : 'border-neutral-300 bg-white text-neutral-900',
+              ].join(' ')}
+            >
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={isDone}
+                onChange={() => onToggle(todo.id)}
+                aria-label="할 일 완료"
+              />
+              {isDone ? '✓' : ''}
+            </label>
+            <Link
+              href={`/planner/list/${todo.id}`}
+              className="truncate text-sm font-semibold text-neutral-900"
+            >
+              {todo.title}
+            </Link>
+            <span className="text-[10px] font-semibold text-purple-500">
+              {todo.isFixed ? '과제' : '학습'}
+            </span>
+          </div>
+          <Link
+            href={`/planner/list/${todo.id}`}
+            className="text-neutral-300"
+            aria-label="상세 이동"
+          >
+            ›
+          </Link>
+        </div>
+        <div className="mt-3 rounded-2xl bg-black px-3 py-2 text-xs text-white">
+          학습 시 유의 해야할 점
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -62,7 +112,7 @@ export default function TodoItem({
               />
             ) : (
               <Link
-                href={`/planner/${todo.id}`}
+                href={`/planner/list/${todo.id}`}
                 className={[
                   'truncate text-sm font-semibold',
                   isDone ? 'text-neutral-400 line-through' : 'text-neutral-900',
@@ -136,7 +186,7 @@ export default function TodoItem({
         {!todo.isFixed && !editing && (
           <button
             type="button"
-            onClick={() => onRemove(todo.id)}
+            onClick={() => onRemove?.(todo.id)}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-neutral-700 ring-1 ring-neutral-200 transition hover:ring-neutral-300"
             aria-label="삭제"
           >

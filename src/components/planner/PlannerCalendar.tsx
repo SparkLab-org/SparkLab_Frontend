@@ -51,10 +51,15 @@ export default function PlannerCalendar({}: Props) {
   }, [hasLoadedTodos, loadTodos]);
 
   /** ✅ 주간 7일 */
-  const weekDays = useMemo(() => {
-    const start = startOfWeek(selectedDate, { weekStartsOn: 0 });
-    return Array.from({ length: 7 }, (_, i) => addDays(start, i));
-  }, [selectedDate]);
+  const weekStart = useMemo(
+    () => startOfWeek(selectedDate, { weekStartsOn: 0 }),
+    [selectedDate]
+  );
+  const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart]
+  );
 
   /** ✅ 월간 42칸 */
   const monthCells = useMemo(
@@ -64,10 +69,8 @@ export default function PlannerCalendar({}: Props) {
 
   /** ✅ 헤더 텍스트 */
   const headerText = useMemo(() => {
-    if (view === "month")
-      return format(selectedDate, "yyyy년 M월", { locale: ko });
     return format(selectedDate, "M월 d일(EEE)", { locale: ko });
-  }, [selectedDate, view]);
+  }, [selectedDate]);
 
   /** ✅ 날짜별 점(상태) - 투두 기반 */
   const dotsByDate: Record<string, Dot[]> = useMemo(() => {
@@ -88,6 +91,19 @@ export default function PlannerCalendar({}: Props) {
       .sort((a, b) => a.dueTime.localeCompare(b.dueTime));
   }, [todos, selectedDateStr]);
 
+  const itemsByDate = useMemo(() => {
+    return todos.reduce<Record<string, { title: string; status: string }[]>>(
+      (acc, todo) => {
+        if (!todo.dueDate) return acc;
+        const items = acc[todo.dueDate] ?? [];
+        items.push({ title: todo.title, status: todo.status });
+        acc[todo.dueDate] = items;
+        return acc;
+      },
+      {}
+    );
+  }, [todos]);
+
   /** ✅ 이전/다음 이동 */
   const goPrev = () => {
     if (view === "week") setSelectedDate(subWeeks(selectedDate, 1));
@@ -100,110 +116,82 @@ export default function PlannerCalendar({}: Props) {
   };
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-6 px-3 pb-16">
-      {/* 주간/월간 토글 */}
-      <div className="flex items-center justify-between pt-1 text-sm text-neutral-700">
-        <button
-          aria-label="뒤로"
-          className="rounded-full px-2 py-1 text-neutral-600"
-        >
-          ←
-        </button>
+    <div className="mx-auto flex max-w-lg flex-col gap-6 px-3 pb-16">
+      <section className="rounded-3xl">
+        <div className="flex justify-center">
+          <PlannerViewToggle view={view} onChange={setView} />
+        </div>
 
-        <PlannerViewToggle view={view} onChange={setView} />
-
-        <button
-          aria-label="앞으로"
-          className="rounded-full px-2 py-1 text-neutral-600"
-        >
-          →
-        </button>
-      </div>
-
-      {/* 날짜 셀렉터 */}
-      <section
-        className="rounded-3xl p-5 shadow-sm ring-1 ring-neutral-100"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(245, 245, 245, 0) 46.7%, #F5F5F5 100%)",
-        }}
-      >
-        <div className="flex items-center justify-between text-sm font-semibold text-neutral-900">
-          <span>{headerText}</span>
-          <div className="flex items-center gap-3 text-neutral-500">
-            <button
-              type="button"
-              aria-label="이전"
-              className="px-2"
-              onClick={goPrev}
-            >
-              ←
-            </button>
-            <button
-              type="button"
-              aria-label="다음"
-              className="px-2"
-              onClick={goNext}
-            >
-              →
-            </button>
+        <div className="mt-4 rounded-2xl p-4">
+          <div className="flex items-center justify-between text-l font-semibold text-neutral-900">
+            <div className="flex items-center gap-2 text-neutral-500">
+              <button
+                type="button"
+                aria-label="이전"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-neutral-700"
+                onClick={goPrev}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                aria-label="다음"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-neutral-700"
+                onClick={goNext}
+              >
+                ›
+              </button>
+            </div>
+            <span className="text-right">{headerText}</span>
           </div>
-        </div>
 
-        <div className="mt-4 grid grid-cols-7 gap-2 text-center text-xs text-neutral-400">
-          {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
-            <span key={d}>{d}</span>
-          ))}
-        </div>
+          <div className="mt-4 grid grid-cols-7 gap-2 text-center text-sm text-neutral-400">
+            {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
+              <span key={d}>{d}</span>
+            ))}
+          </div>
 
-        <PlannerDateGrid
-          view={view}
-          selectedDate={selectedDate}
-          onSelectDate={(d) => setSelectedDate(d)}
-          weekDays={weekDays}
-          monthCells={monthCells}
-          dotsByDate={dotsByDate}
-        />
+          <PlannerDateGrid
+            view={view}
+            selectedDate={selectedDate}
+            onSelectDate={(d) => setSelectedDate(d)}
+            weekDays={weekDays}
+            monthCells={monthCells}
+            dotsByDate={dotsByDate}
+            itemsByDate={itemsByDate}
+          />
+        </div>
       </section>
 
-      {view === "month" && (
-        <section
-          className="space-y-3 rounded-[26px] border border-neutral-100 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(245, 245, 245, 0) 46.7%, #F5F5F5 100%)",
-          }}
-        >
-          <header className="flex items-center justify-between">
-            <div>
-              <p className="text-lg font-semibold text-neutral-800">
-                {format(selectedDate, "M월 d일")} 할 일
-              </p>
-              <p className="text-xs text-neutral-500">
-                {selectedTodos.length}개
-              </p>
-            </div>
-          </header>
+      <section className="space-y-3 rounded-3xl">
+        <header className="flex items-center justify-between">
+          <div>
+            <p className="text-xl mt-5 font-semibold text-neutral-800">
+              {format(selectedDate, "M월 d일")} 학습목록
+            </p>
+            <p className="text-xs text-neutral-500">{selectedTodos.length}개</p>
+          </div>
+        </header>
 
-          {selectedTodos.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-neutral-200 bg-white/80 px-4 py-6 text-center text-sm text-neutral-500">
-              선택한 날짜에 등록된 할 일이 없어요.
-            </div>
-          ) : (
-            <div className="grid gap-3">
-              {selectedTodos.map((todo) => (
-                <TodoItem
-                  key={todo.id}
-                  todo={todo}
-                  onToggle={toggleTodo}
-                  onRemove={removeTodo}
-                  onUpdate={updateTodo}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+        {selectedTodos.length === 0 ? (
+          <div className="rounded-2xl  bg-white/80 px-4 py-6 text-center text-sm text-neutral-500">
+            선택한 날짜에 등록된 할 일이 없어요.
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {selectedTodos.map((todo) => (
+              <TodoItem
+                key={todo.id}
+                todo={todo}
+                onToggle={toggleTodo}
+                onRemove={removeTodo}
+                onUpdate={updateTodo}
+                variant="compact"
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
