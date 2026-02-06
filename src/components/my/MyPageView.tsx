@@ -26,10 +26,10 @@ export default function MyPageView() {
     return { monthPercent: percent, monthDoneCount: doneCount, monthTotalCount: totalCount };
   }, [todos]);
 
-  const totalStudyMinutes = useMemo(
+  const totalStudySeconds = useMemo(
     () =>
       todos.reduce(
-        (sum, todo) => sum + (typeof todo.studyMinutes === 'number' ? todo.studyMinutes : 0),
+        (sum, todo) => sum + (typeof todo.studySeconds === 'number' ? todo.studySeconds : 0),
         0
       ),
     [todos]
@@ -46,7 +46,7 @@ export default function MyPageView() {
   return (
     <div className="mx-auto max-w-md space-y-5 pb-16">
       <MyHeader />
-      <MyProfileCard name="OOO" roleLabel="OOO 멘티" totalStudyMinutes={totalStudyMinutes} />
+      <MyProfileCard name="OOO" roleLabel="OOO 멘티" totalStudySeconds={totalStudySeconds} />
       <MyAchievementCard
         monthPercent={monthPercent}
         monthDoneCount={monthDoneCount}

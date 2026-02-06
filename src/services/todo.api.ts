@@ -13,7 +13,7 @@ export type CreateTodoInput = {
 export type UpdateTodoInput = Partial<
   Pick<
     Todo,
-    'title' | 'subject' | 'status' | 'studyMinutes' | 'dueDate' | 'dueTime' | 'type' | 'feedback'
+    'title' | 'subject' | 'status' | 'studySeconds' | 'dueDate' | 'dueTime' | 'type' | 'feedback'
   >
 >;
 
@@ -138,10 +138,10 @@ function mapTodoFromApi(item: TodoApiItem): Todo {
     feedback: item.feedback ?? null,
     status: toTodoStatus(item.status, item.completedAt ?? null),
     subject: toTodoSubject(item.subject),
-    studyMinutes:
+    studySeconds:
       typeof item.actualMinutes === 'number'
-        ? item.actualMinutes
-        : item.plannedMinutes ?? 0,
+        ? Math.round(item.actualMinutes * 60)
+        : Math.round((item.plannedMinutes ?? 0) * 60),
     createdAt: toEpochMillis(item.createTime ?? item.updateTime ?? item.completedAt ?? null),
     dueDate: item.targetDate ?? '',
     dueTime: toTimeHHmm(item.completedAt ?? item.updateTime ?? item.createTime ?? null),
@@ -210,7 +210,9 @@ export async function updateTodo(
   if (patch.title) payload.title = patch.title;
   if (patch.subject) payload.subject = toApiSubject(patch.subject);
   if (patch.status) payload.status = toApiStatus(patch.status);
-  if (typeof patch.studyMinutes === 'number') payload.actualMinutes = patch.studyMinutes;
+  if (typeof patch.studySeconds === 'number') {
+    payload.actualMinutes = Math.floor(patch.studySeconds / 60);
+  }
   if (patch.dueDate) payload.targetDate = patch.dueDate;
   if (patch.type) payload.type = toApiType(patch.type);
   if (patch.feedback !== undefined) payload.feedback = patch.feedback;

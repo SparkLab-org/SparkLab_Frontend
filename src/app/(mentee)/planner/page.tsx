@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { BellIcon } from "lucide-react";
-import GreetingCard from "@/src/components/planner/greetingCard";
-import WeeklyCalendar from "@/src/components/calendar/WeeklyCalendar";
-import TodayTodoSummary from "@/src/components/planner/TodayTodoSummary";
-import YesterdayFeedbackSummary from "@/src/components/planner/YesterdayFeedbackSummary";
+import GreetingCard from "@/src/components/planner/landing/greetingCard";
+import WeeklyCalendar from "@/src/components/planner/landing/WeeklyCalendar";
+import TodayTodoSummary from "@/src/components/planner/landing/TodayTodoSummary";
+import YesterdayFeedbackSummary from "@/src/components/planner/landing/YesterdayFeedbackSummary";
 
 export default function PlannerPage() {
   return (

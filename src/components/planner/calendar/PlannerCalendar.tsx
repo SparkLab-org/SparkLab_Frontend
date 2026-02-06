@@ -16,8 +16,8 @@ import { ko } from "date-fns/locale";
 import PlannerViewToggle from "./PlannerViewToggle";
 import PlannerDateGrid from "./PlannerDateGrid";
 import { usePlannerStore } from "@/src/store/plannerStore";
-import TodoItem from "@/src/components/planner/TodoItem";
-import TodoCreateModal from "@/src/components/planner/TodoCreateModal";
+import TodoItem from "@/src/components/planner/todo/TodoItem";
+import TodoCreateModal from "@/src/components/planner/todo/TodoCreateModal";
 import type { TodoSubject } from "@/src/lib/types/planner";
 import {
   useDeleteTodoMutation,

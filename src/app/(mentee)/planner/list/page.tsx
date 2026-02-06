@@ -1,4 +1,4 @@
-import TodoList from '@/src/components/planner/TodoList';
+import TodoList from '@/src/components/planner/todo/TodoList';
 
 export default function TodoListPage() {
   return (

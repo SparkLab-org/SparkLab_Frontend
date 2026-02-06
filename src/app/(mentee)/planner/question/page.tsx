@@ -1,6 +1,6 @@
-import QuestionAlertCard from '@/src/components/question/QuestionAlertCard';
-import QuestionList from '@/src/components/question/QuestionList';
-import { questionList } from '@/src/components/question/data';
+import QuestionAlertCard from '@/src/components/planner/question/QuestionAlertCard';
+import QuestionList from '@/src/components/planner/question/QuestionList';
+import { questionList } from '@/src/components/planner/question/data';
 
 export default function QuestionPage() {
   return (

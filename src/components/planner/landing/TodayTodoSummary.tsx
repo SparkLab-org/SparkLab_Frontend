@@ -48,8 +48,8 @@ export default function TodayTodoSummary() {
 
       <div className="grid gap-2">
         {todayTodos.length === 0 && (
-          <div className="rounded-2xl px-3 py-3 text-center text-xs text-neutral-500">
-            등록된 할 일이 없어요.
+          <div className="rounded-xl bg-[#FFF] px-3 py-3 text-sm text-neutral-500">
+            등록된 할 일이 없어요
           </div>
         )}
 

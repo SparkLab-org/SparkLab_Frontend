@@ -39,14 +39,14 @@ export default function ListDetailView({ params }: Props) {
     updateTodoMutation.mutate({ id: todo.id, patch: { status: nextStatus } });
   };
 
-  const recordStudyMinutes = (elapsedSeconds: number) => {
+  const recordStudySeconds = (elapsedSeconds: number) => {
     if (!todo) return;
     if (elapsedSeconds <= 0) return;
-    const minutesToAdd = Math.ceil(elapsedSeconds / 60);
-    if (minutesToAdd <= 0) return;
+    const secondsToAdd = Math.floor(elapsedSeconds);
+    if (secondsToAdd <= 0) return;
     updateTodoMutation.mutate({
       id: todo.id,
-      patch: { studyMinutes: (todo.studyMinutes ?? 0) + minutesToAdd },
+      patch: { studySeconds: (todo.studySeconds ?? 0) + secondsToAdd },
     });
   };
 
@@ -60,9 +60,9 @@ export default function ListDetailView({ params }: Props) {
       />
       <TaskProgressCard
         statusLabel={statusLabel}
-        studyMinutes={todo?.studyMinutes}
+        studySeconds={todo?.studySeconds}
         isLocked={isLocked}
-        onRecord={recordStudyMinutes}
+        onRecord={recordStudySeconds}
       />
       <GoalMemoCard />
       <MentorFeedbackCard feedback={todo?.feedback} />

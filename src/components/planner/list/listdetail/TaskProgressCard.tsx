@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 type Props = {
   statusLabel: string;
-  studyMinutes?: number;
+  studySeconds?: number;
   isLocked: boolean;
   onRecord: (elapsedSeconds: number) => void;
 };
@@ -17,16 +17,9 @@ function formatHMS(totalSeconds: number) {
   return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-function formatMinutes(totalMinutes: number) {
-  const safe = Number.isFinite(totalMinutes) ? Math.max(0, Math.floor(totalMinutes)) : 0;
-  const hours = Math.floor(safe / 60);
-  const minutes = safe % 60;
-  return `${hours}:${String(minutes).padStart(2, '0')}:00`;
-}
-
 export default function TaskProgressCard({
   statusLabel,
-  studyMinutes = 0,
+  studySeconds = 0,
   isLocked,
   onRecord,
 }: Props) {
@@ -53,7 +46,7 @@ export default function TaskProgressCard({
         <div className="text-right">
           <p className="text-xs font-semibold text-neutral-500">진행한 시간</p>
           <p className="mt-1 text-sm font-semibold text-neutral-900">
-            {formatMinutes(studyMinutes)}
+            {formatHMS(studySeconds)}
           </p>
         </div>
       </div>

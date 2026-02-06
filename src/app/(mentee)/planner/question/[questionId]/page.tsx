@@ -1,5 +1,5 @@
-import QuestionDetailCards from '@/src/components/question/QuestionDetailCards';
-import { getQuestionDetail } from '@/src/components/question/data';
+import QuestionDetailCards from '@/src/components/planner/question/QuestionDetailCards';
+import { getQuestionDetail } from '@/src/components/planner/question/data';
 
 export default async function QuestionDetailPage({
   params,

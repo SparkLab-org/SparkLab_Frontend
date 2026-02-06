@@ -11,7 +11,7 @@ export type CreateTodoInput = {
 export type UpdateTodoInput = Partial<
   Pick<
     Todo,
-    'title' | 'subject' | 'status' | 'studyMinutes' | 'dueDate' | 'dueTime' | 'type' | 'feedback'
+    'title' | 'subject' | 'status' | 'studySeconds' | 'dueDate' | 'dueTime' | 'type' | 'feedback'
   >
 >;
 
@@ -38,7 +38,7 @@ const seedTodos: Todo[] = [
     subject: '수학',
     type: '과제',
     feedback: '풀이 과정이 좋아요. 계산 실수를 줄여봅시다.',
-    studyMinutes: 0,
+    studySeconds: 0,
     createdAt: Date.now(),
     dueDate: todayISO(),
     dueTime: '23:59',
@@ -51,7 +51,7 @@ const seedTodos: Todo[] = [
     subject: '영어',
     type: '과제',
     feedback: '요약이 깔끔해요. 키워드 중심으로 정리해봅시다.',
-    studyMinutes: 0,
+    studySeconds: 0,
     createdAt: Date.now(),
     dueDate: todayISO(),
     dueTime: '21:00',
@@ -64,20 +64,32 @@ const seedTodos: Todo[] = [
     subject: '국어',
     type: '학습',
     feedback: '요약이 깔끔해요. 키워드 중심으로 정리해봅시다.',
-    studyMinutes: 20,
+    studySeconds: 20 * 60,
     createdAt: Date.now(),
     dueDate: todayISO(),
     dueTime: '18:30',
   },
 ];
 
+type StoredTodo = Todo & { studyMinutes?: number; studySeconds?: number };
+
+function normalizeTodo(todo: StoredTodo): Todo {
+  const studySeconds = Number.isFinite(todo.studySeconds)
+    ? Math.max(0, Math.floor(todo.studySeconds as number))
+    : Number.isFinite(todo.studyMinutes)
+    ? Math.max(0, Math.floor((todo.studyMinutes as number) * 60))
+    : 0;
+  const { studyMinutes, ...rest } = todo;
+  return { ...rest, studySeconds };
+}
+
 function loadFromStorage(): Todo[] | null {
   if (typeof window === 'undefined') return null;
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as Todo[];
-    return Array.isArray(parsed) ? parsed : null;
+    const parsed = JSON.parse(raw) as StoredTodo[];
+    return Array.isArray(parsed) ? parsed.map(normalizeTodo) : null;
   } catch {
     return null;
   }
@@ -111,7 +123,7 @@ export async function createTodo(input: CreateTodoInput): Promise<Todo> {
     subject: input.subject,
     type: input.type,
     feedback: null,
-    studyMinutes: 0,
+    studySeconds: 0,
     createdAt: Date.now(),
     dueDate: input.dueDate,
     dueTime: input.dueTime,

@@ -3,17 +3,18 @@
 type Props = {
   name: string;
   roleLabel: string;
-  totalStudyMinutes: number;
+  totalStudySeconds: number;
 };
 
-function formatTimeFromMinutes(totalMinutes: number) {
-  const safe = Number.isFinite(totalMinutes) ? Math.max(0, Math.floor(totalMinutes)) : 0;
-  const hours = Math.floor(safe / 60);
-  const minutes = safe % 60;
-  return `${hours}:${String(minutes).padStart(2, '0')}:00`;
+function formatTimeFromSeconds(totalSeconds: number) {
+  const safe = Number.isFinite(totalSeconds) ? Math.max(0, Math.floor(totalSeconds)) : 0;
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const seconds = safe % 60;
+  return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-export default function MyProfileCard({ name, roleLabel, totalStudyMinutes }: Props) {
+export default function MyProfileCard({ name, roleLabel, totalStudySeconds }: Props) {
   return (
     <section className="flex items-center justify-between rounded-3xl px-4 py-3">
       <div className="flex items-center gap-3">
@@ -26,7 +27,7 @@ export default function MyProfileCard({ name, roleLabel, totalStudyMinutes }: Pr
         </div>
       </div>
       <p className="text-base font-bold text-neutral-900">
-        {formatTimeFromMinutes(totalStudyMinutes)}
+        {formatTimeFromSeconds(totalStudySeconds)}
       </p>
     </section>
   );

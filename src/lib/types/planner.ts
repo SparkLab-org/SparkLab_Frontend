@@ -10,7 +10,7 @@ export interface Todo {
   subject: TodoSubject;
   type: TodoType;
   feedback?: string | null;
-  studyMinutes: number;  // 누적 분
+  studySeconds: number;  // 누적 초
   createdAt: number;
   dueDate: string;       // YYYY-MM-DD
   dueTime: string;       // HH:mm

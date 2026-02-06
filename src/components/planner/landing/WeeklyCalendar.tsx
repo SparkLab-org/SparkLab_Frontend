@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo } from "react";
 import { addDays, format, startOfWeek } from "date-fns";
 
-import PlannerDateGrid from "./PlannerDateGrid";
+import PlannerDateGrid from "../calendar/PlannerDateGrid";
 import { usePlannerStore } from "@/src/store/plannerStore";
 import { useTodosQuery } from "@/src/hooks/todoQueries";
 
@@ -98,7 +98,6 @@ export default function WeeklyCalendar({}: Props) {
         monthCells={[]}
         progressByDate={progressByDate}
       />
-
     </section>
   );
 }
