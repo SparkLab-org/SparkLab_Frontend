@@ -9,11 +9,15 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
-export default function AssignmentAttachmentCard() {
+type Props = {
+  guideFileName?: string | null;
+  guideFileUrl?: string | null;
+};
+
+export default function AssignmentAttachmentCard({ guideFileName, guideFileUrl }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [files, setFiles] = useState<File[]>([]);
-  const mentorGuide = null as null | { name: string; url: string };
-  const hasGuide = Boolean(mentorGuide?.url);
+  const hasGuide = Boolean(guideFileUrl);
 
   const handlePickFiles = () => {
     inputRef.current?.click();
@@ -64,11 +68,11 @@ export default function AssignmentAttachmentCard() {
         <p className="text-xs font-semibold text-neutral-500">멘토 학습지도</p>
         <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-4">
           <p className="text-sm text-neutral-500">
-            {hasGuide ? mentorGuide?.name : '등록된 학습지가 없어요.'}
+            {hasGuide ? guideFileName : '등록된 학습지가 없어요.'}
           </p>
           {hasGuide ? (
             <a
-              href={mentorGuide?.url}
+              href={guideFileUrl ?? undefined}
               download
               className="shrink-0 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700"
             >

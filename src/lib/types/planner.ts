@@ -10,6 +10,11 @@ export interface Todo {
   subject: TodoSubject;
   type: TodoType;
   feedback?: string | null;
+  goal?: string | null;
+  assigneeId?: string | null;
+  assigneeName?: string | null;
+  guideFileName?: string | null;
+  guideFileUrl?: string | null;
   studySeconds: number;  // 누적 초
   createdAt: number;
   dueDate: string;       // YYYY-MM-DD

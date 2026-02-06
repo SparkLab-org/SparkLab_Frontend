@@ -8,12 +8,31 @@ export type CreateTodoInput = {
   dueDate: string; // YYYY-MM-DD
   dueTime: string; // HH:mm
   type: TodoType;
+  goal?: string;
+  assigneeId?: string;
+  assigneeName?: string;
+  guideFileName?: string;
+  guideFileUrl?: string;
+  isFixed?: boolean;
 };
 
 export type UpdateTodoInput = Partial<
   Pick<
     Todo,
-    'title' | 'subject' | 'status' | 'studySeconds' | 'dueDate' | 'dueTime' | 'type' | 'feedback'
+    | 'title'
+    | 'subject'
+    | 'status'
+    | 'studySeconds'
+    | 'dueDate'
+    | 'dueTime'
+    | 'type'
+    | 'feedback'
+    | 'goal'
+    | 'assigneeId'
+    | 'assigneeName'
+    | 'guideFileName'
+    | 'guideFileUrl'
+    | 'isFixed'
   >
 >;
 
@@ -28,6 +47,11 @@ type TodoApiItem = {
   subject: TodoApiSubject;
   type?: TodoApiType;
   isFixed: boolean;
+  goal?: string | null;
+  assigneeId?: string | null;
+  assigneeName?: string | null;
+  guideFileName?: string | null;
+  guideFileUrl?: string | null;
   status?: string;
   feedback?: string | null;
   plannedMinutes?: number;
@@ -45,6 +69,12 @@ type CreateTodoApiRequest = {
   plannerId?: number;
   plannedMinutes?: number;
   type?: TodoApiType;
+  goal?: string | null;
+  assigneeId?: string | null;
+  assigneeName?: string | null;
+  guideFileName?: string | null;
+  guideFileUrl?: string | null;
+  isFixed?: boolean;
 };
 
 type UpdateTodoApiRequest = Partial<CreateTodoApiRequest> & {
@@ -138,6 +168,11 @@ function mapTodoFromApi(item: TodoApiItem): Todo {
     isFixed: item.isFixed ?? false,
     type: toTodoType(item.type, item.isFixed),
     feedback: item.feedback ?? null,
+    goal: item.goal ?? null,
+    assigneeId: item.assigneeId ?? null,
+    assigneeName: item.assigneeName ?? null,
+    guideFileName: item.guideFileName ?? null,
+    guideFileUrl: item.guideFileUrl ?? null,
     status: toTodoStatus(item.status, item.completedAt ?? null),
     subject: toTodoSubject(item.subject),
     studySeconds:
@@ -192,6 +227,12 @@ export async function createTodo(input: CreateTodoInput): Promise<Todo> {
     targetDate: input.dueDate,
     type: toApiType(input.type),
   };
+  if (input.goal) payload.goal = input.goal;
+  if (input.assigneeId) payload.assigneeId = input.assigneeId;
+  if (input.assigneeName) payload.assigneeName = input.assigneeName;
+  if (input.guideFileName) payload.guideFileName = input.guideFileName;
+  if (input.guideFileUrl) payload.guideFileUrl = input.guideFileUrl;
+  if (typeof input.isFixed === 'boolean') payload.isFixed = input.isFixed;
 
   const plannerId = resolvePlannerId();
   if (plannerId) payload.plannerId = plannerId;
@@ -221,6 +262,12 @@ export async function updateTodo(
   if (patch.dueDate) payload.targetDate = patch.dueDate;
   if (patch.type) payload.type = toApiType(patch.type);
   if (patch.feedback !== undefined) payload.feedback = patch.feedback;
+  if (patch.goal !== undefined) payload.goal = patch.goal ?? null;
+  if (patch.assigneeId !== undefined) payload.assigneeId = patch.assigneeId ?? null;
+  if (patch.assigneeName !== undefined) payload.assigneeName = patch.assigneeName ?? null;
+  if (patch.guideFileName !== undefined) payload.guideFileName = patch.guideFileName ?? null;
+  if (patch.guideFileUrl !== undefined) payload.guideFileUrl = patch.guideFileUrl ?? null;
+  if (typeof patch.isFixed === 'boolean') payload.isFixed = patch.isFixed;
 
   if (Object.keys(payload).length === 0) {
     return null;

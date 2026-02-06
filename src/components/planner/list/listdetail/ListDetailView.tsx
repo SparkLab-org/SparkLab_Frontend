@@ -56,7 +56,10 @@ export default function ListDetailView({ params }: Props) {
       />
       <GoalMemoCard />
       <MentorFeedbackCard feedback={todo?.feedback} />
-      <AssignmentAttachmentCard />
+      <AssignmentAttachmentCard
+        guideFileName={todo?.guideFileName}
+        guideFileUrl={todo?.guideFileUrl}
+      />
     </div>
   );
 }

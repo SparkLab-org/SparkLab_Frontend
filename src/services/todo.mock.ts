@@ -6,12 +6,31 @@ export type CreateTodoInput = {
   dueDate: string; // YYYY-MM-DD
   dueTime: string; // HH:mm
   type: TodoType;
+  goal?: string;
+  assigneeId?: string;
+  assigneeName?: string;
+  guideFileName?: string;
+  guideFileUrl?: string;
+  isFixed?: boolean;
 };
 
 export type UpdateTodoInput = Partial<
   Pick<
     Todo,
-    'title' | 'subject' | 'status' | 'studySeconds' | 'dueDate' | 'dueTime' | 'type' | 'feedback'
+    | 'title'
+    | 'subject'
+    | 'status'
+    | 'studySeconds'
+    | 'dueDate'
+    | 'dueTime'
+    | 'type'
+    | 'feedback'
+    | 'goal'
+    | 'assigneeId'
+    | 'assigneeName'
+    | 'guideFileName'
+    | 'guideFileUrl'
+    | 'isFixed'
   >
 >;
 
@@ -38,6 +57,11 @@ const seedTodos: Todo[] = [
     subject: '수학',
     type: '과제',
     feedback: '풀이 과정이 좋아요. 계산 실수를 줄여봅시다.',
+    goal: '정확도 90% 이상',
+    assigneeId: 'm1',
+    assigneeName: '김솔',
+    guideFileName: null,
+    guideFileUrl: null,
     studySeconds: 0,
     createdAt: Date.now(),
     dueDate: todayISO(),
@@ -51,6 +75,11 @@ const seedTodos: Todo[] = [
     subject: '영어',
     type: '과제',
     feedback: '요약이 깔끔해요. 키워드 중심으로 정리해봅시다.',
+    goal: '하루 40개 암기',
+    assigneeId: 'm1',
+    assigneeName: '김솔',
+    guideFileName: null,
+    guideFileUrl: null,
     studySeconds: 0,
     createdAt: Date.now(),
     dueDate: todayISO(),
@@ -64,10 +93,33 @@ const seedTodos: Todo[] = [
     subject: '국어',
     type: '학습',
     feedback: '요약이 깔끔해요. 키워드 중심으로 정리해봅시다.',
+    goal: null,
+    assigneeId: 'm1',
+    assigneeName: '김솔',
+    guideFileName: null,
+    guideFileUrl: null,
     studySeconds: 20 * 60,
     createdAt: Date.now(),
     dueDate: todayISO(),
     dueTime: '18:30',
+  },
+  {
+    id: 'seed-4',
+    title: '멘토 · 영어 지문 2개 풀이',
+    isFixed: true,
+    status: 'TODO',
+    subject: '영어',
+    type: '과제',
+    feedback: null,
+    goal: '지문당 20분',
+    assigneeId: 'm2',
+    assigneeName: '이하늘',
+    guideFileName: null,
+    guideFileUrl: null,
+    studySeconds: 0,
+    createdAt: Date.now(),
+    dueDate: todayISO(),
+    dueTime: '20:00',
   },
 ];
 
@@ -115,14 +167,20 @@ export async function listTodos(): Promise<Todo[]> {
 }
 
 export async function createTodo(input: CreateTodoInput): Promise<Todo> {
+  const defaultAssigneeId = input.assigneeId ?? 'm1';
   const newTodo: Todo = {
     id: uid(),
     title: input.title,
-    isFixed: false,
+    isFixed: input.isFixed ?? false,
     status: 'TODO',
     subject: input.subject,
     type: input.type,
     feedback: null,
+    goal: input.goal ?? null,
+    assigneeId: defaultAssigneeId,
+    assigneeName: input.assigneeName ?? null,
+    guideFileName: input.guideFileName ?? null,
+    guideFileUrl: input.guideFileUrl ?? null,
     studySeconds: 0,
     createdAt: Date.now(),
     dueDate: input.dueDate,
