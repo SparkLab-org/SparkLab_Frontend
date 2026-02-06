@@ -1,9 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { format, isSameDay, isSameMonth } from 'date-fns';
 
 type View = 'week' | 'month';
-type TodoSummary = { title: string; status: string };
+type TodoSummary = { id: string; title: string; status: string };
 
 type Props = {
   view: View;
@@ -44,26 +45,23 @@ export default function PlannerDateGrid({
         const isComplete = typeof progress === 'number' && progress >= 1;
         const items = view === 'month' ? itemsByDate?.[key] ?? [] : [];
 
-        return (
-          <button
-            key={key}
-            type="button"
-            onClick={() => onSelectDate(d)}
-            className={[
-              view === 'month'
-                ? 'relative flex min-h-[96px] flex-col items-start gap-1 rounded-2xl px-2 py-2 text-left'
-                : 'relative flex h-10 items-center justify-center rounded-full',
-              view === 'month'
-                ? inMonth
-                  ? 'text-neutral-900'
-                  : 'text-neutral-300'
-                : isSelected
-                ? 'bg-black text-white'
-                : inMonth
-                ? 'bg-neutral-100 text-neutral-800'
-                : 'bg-neutral-50 text-neutral-300',
-            ].join(' ')}
-          >
+        const containerClassName = [
+          view === 'month'
+            ? 'relative flex min-h-[96px] flex-col items-start gap-1 rounded-2xl px-2 py-2 text-left'
+            : 'relative flex h-10 items-center justify-center rounded-full',
+          view === 'month'
+            ? inMonth
+              ? 'text-neutral-900'
+              : 'text-neutral-300'
+            : isSelected
+            ? 'bg-black text-white'
+            : inMonth
+            ? 'bg-neutral-100 text-neutral-800'
+            : 'bg-neutral-50 text-neutral-300',
+        ].join(' ');
+
+        const cellContent = (
+          <>
             {view === 'month' ? (
               <span
                 className={[
@@ -83,18 +81,20 @@ export default function PlannerDateGrid({
 
             {view === 'month' && items.length > 0 && (
               <div className="mt-1 flex w-full flex-col gap-1">
-                {items.slice(0, 2).map((item, idx) => (
-                  <span
-                    key={`${key}-${idx}`}
+                {items.slice(0, 2).map((item) => (
+                  <Link
+                    key={`${key}-${item.id}`}
+                    href={`/planner/list/${item.id}`}
+                    onClick={(event) => event.stopPropagation()}
                     className={[
-                      'truncate text-[10px] font-semibold',
+                      'truncate text-[10px] font-semibold transition hover:underline',
                       item.status === 'DONE'
                         ? 'text-emerald-500'
                         : 'text-purple-500',
                     ].join(' ')}
                   >
                     {item.title}
-                  </span>
+                  </Link>
                 ))}
               </div>
             )}
@@ -123,7 +123,36 @@ export default function PlannerDateGrid({
                 </div>
               </div>
             )}
-          </button>
+          </>
+        );
+
+        return (
+          view === 'month' ? (
+            <div
+              key={key}
+              role="button"
+              tabIndex={0}
+              onClick={() => onSelectDate(d)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onSelectDate(d);
+                }
+              }}
+              className={containerClassName}
+            >
+              {cellContent}
+            </div>
+          ) : (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onSelectDate(d)}
+              className={containerClassName}
+            >
+              {cellContent}
+            </button>
+          )
         );
       })}
     </div>

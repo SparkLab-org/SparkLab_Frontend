@@ -1,25 +1,19 @@
-import Link from 'next/link';
+'use client';
 
-const questions = [
-  {
-    id: 'q1',
-    title: '벡터 내적이 왜 각도랑 관련이 있나요?',
-    status: '답변중',
-  },
-  {
-    id: 'q2',
-    title: '영어 지문 해석이 너무 오래 걸려요.',
-    status: '완료',
-  },
-];
+import Link from 'next/link';
+import { useMemo } from 'react';
+import { useQuestionsQuery } from '@/src/hooks/questionQueries';
 
 export default function QuestionSummary() {
+  const { data: questions = [] } = useQuestionsQuery();
+  const topQuestions = useMemo(() => questions.slice(0, 2), [questions]);
+
   return (
     <section className="space-y-3 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-neutral-100">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-neutral-900">질문</p>
         <Link
-          href="/question"
+          href="/planner/question"
           className="inline-flex items-center gap-1 text-xs font-semibold text-neutral-500 hover:text-neutral-900"
         >
           전체보기
@@ -28,7 +22,7 @@ export default function QuestionSummary() {
       </div>
 
       <div className="grid gap-2">
-        {questions.map((q) => (
+        {topQuestions.map((q) => (
           <div
             key={q.id}
             className="flex items-center justify-between rounded-2xl bg-neutral-100 px-3 py-2 text-xs"

@@ -115,11 +115,11 @@ export default function PlannerCalendar({}: Props) {
   }, [todos, selectedDateStr]);
 
   const itemsByDate = useMemo(() => {
-    return todos.reduce<Record<string, { title: string; status: string }[]>>(
+    return todos.reduce<Record<string, { id: string; title: string; status: string }[]>>(
       (acc, todo) => {
         if (!todo.dueDate) return acc;
         const items = acc[todo.dueDate] ?? [];
-        items.push({ title: todo.title, status: todo.status });
+        items.push({ id: todo.id, title: todo.title, status: todo.status });
         acc[todo.dueDate] = items;
         return acc;
       },

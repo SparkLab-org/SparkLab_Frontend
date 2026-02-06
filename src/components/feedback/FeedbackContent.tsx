@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTodosQuery } from "@/src/hooks/todoQueries";
 import FeedbackHeaderActions from "./FeedbackHeaderActions";
 import FeedbackList from "./FeedbackList";
@@ -13,21 +13,70 @@ type Props = {
 
 const STORAGE_KEY = "feedback-read";
 
+const feedbackReadStore = (() => {
+  const listeners = new Set<() => void>();
+  let hydrated = false;
+
+  const emit = () => {
+    listeners.forEach((listener) => listener());
+  };
+
+  const subscribe = (listener: () => void) => {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  };
+
+  const getSnapshot = () => {
+    if (!hydrated) return "";
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem(STORAGE_KEY) ?? "";
+  };
+
+  const getServerSnapshot = () => "";
+
+  const markHydrated = () => {
+    if (hydrated) return;
+    hydrated = true;
+    emit();
+  };
+
+  const setReadIds = (ids: string[]) => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+    } catch {
+      // ignore storage errors
+    }
+    emit();
+  };
+
+  return { subscribe, getSnapshot, getServerSnapshot, markHydrated, setReadIds };
+})();
+
 export default function FeedbackContent({ title }: Props) {
   const { data: todos = [] } = useTodosQuery();
   const [activeSubject, setActiveSubject] = useState<SubjectFilter>("전체");
-  const [readIds, setReadIds] = useState<Set<string>>(() => {
-    if (typeof window === "undefined") return new Set();
+  const rawReadIds = useSyncExternalStore(
+    feedbackReadStore.subscribe,
+    feedbackReadStore.getSnapshot,
+    feedbackReadStore.getServerSnapshot
+  );
+
+  const readIds = useMemo(() => {
+    if (!rawReadIds) return new Set<string>();
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) return new Set();
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return new Set();
+      const parsed = JSON.parse(rawReadIds);
+      if (!Array.isArray(parsed)) return new Set<string>();
       return new Set(parsed.filter((id) => typeof id === "string"));
     } catch {
-      return new Set();
+      return new Set<string>();
     }
-  });
+  }, [rawReadIds]);
+
+  useEffect(() => {
+    feedbackReadStore.markHydrated();
+  }, []);
 
   const feedbackItems = useMemo(() => {
     const filtered = todos.filter(
@@ -48,17 +97,9 @@ export default function FeedbackContent({ title }: Props) {
   const isUnread = (id: string) => !readIds.has(id);
 
   const markRead = (id: string) => {
-    setReadIds((prev) => {
-      if (prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.add(id);
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(next)));
-      } catch {
-        // ignore storage errors
-      }
-      return next;
-    });
+    if (readIds.has(id)) return;
+    const next = Array.from(new Set([...readIds, id]));
+    feedbackReadStore.setReadIds(next);
   };
 
   return (

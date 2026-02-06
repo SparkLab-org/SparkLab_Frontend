@@ -32,6 +32,7 @@ type TodoApiItem = {
   feedback?: string | null;
   plannedMinutes?: number;
   actualMinutes?: number;
+  actualSeconds?: number;
   completedAt?: string | null;
   createTime?: string;
   updateTime?: string;
@@ -49,6 +50,7 @@ type CreateTodoApiRequest = {
 type UpdateTodoApiRequest = Partial<CreateTodoApiRequest> & {
   status?: string;
   actualMinutes?: number;
+  actualSeconds?: number;
   completedAt?: string | null;
   feedback?: string | null;
 };
@@ -139,7 +141,9 @@ function mapTodoFromApi(item: TodoApiItem): Todo {
     status: toTodoStatus(item.status, item.completedAt ?? null),
     subject: toTodoSubject(item.subject),
     studySeconds:
-      typeof item.actualMinutes === 'number'
+      typeof item.actualSeconds === 'number'
+        ? Math.round(item.actualSeconds)
+        : typeof item.actualMinutes === 'number'
         ? Math.round(item.actualMinutes * 60)
         : Math.round((item.plannedMinutes ?? 0) * 60),
     createdAt: toEpochMillis(item.createTime ?? item.updateTime ?? item.completedAt ?? null),
@@ -211,6 +215,7 @@ export async function updateTodo(
   if (patch.subject) payload.subject = toApiSubject(patch.subject);
   if (patch.status) payload.status = toApiStatus(patch.status);
   if (typeof patch.studySeconds === 'number') {
+    payload.actualSeconds = Math.floor(patch.studySeconds);
     payload.actualMinutes = Math.floor(patch.studySeconds / 60);
   }
   if (patch.dueDate) payload.targetDate = patch.dueDate;

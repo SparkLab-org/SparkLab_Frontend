@@ -1,15 +1,29 @@
 import Link from 'next/link';
-import type { QuestionListItem } from './data';
+import type { Question } from '@/src/lib/types/question';
 
 type Props = {
-  items: QuestionListItem[];
+  items: Question[];
+  basePath?: string;
+  showCreate?: boolean;
+  headerLabel?: string;
 };
 
-export default function QuestionList({ items }: Props) {
+function getExcerpt(content: string) {
+  const trimmed = content.trim();
+  if (trimmed.length <= 60) return trimmed;
+  return `${trimmed.slice(0, 60)}...`;
+}
+
+export default function QuestionList({
+  items,
+  basePath = '/planner/question',
+  showCreate = true,
+  headerLabel = '질문 목록',
+}: Props) {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-neutral-800">질문 목록</p>
+        <p className="text-sm font-semibold text-neutral-800">{headerLabel}</p>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -18,21 +32,32 @@ export default function QuestionList({ items }: Props) {
             최신순
             <span className="text-[10px]">⌄</span>
           </button>
-          <Link
-            href="/planner/question/new"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black text-white"
-            aria-label="질문 추가"
-          >
-            +
-          </Link>
+          {showCreate && (
+            <Link
+              href={`${basePath}/new`}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black text-white"
+              aria-label="질문 추가"
+            >
+              +
+            </Link>
+          )}
         </div>
       </div>
 
+      {items.length === 0 && (
+        <div className="rounded-2xl bg-neutral-100 px-4 py-6 text-center text-sm text-neutral-500">
+          등록된 질문이 없어요.
+        </div>
+      )}
+
       <div className="grid gap-3">
-        {items.map((q) => (
+        {items
+          .slice()
+          .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+          .map((q) => (
           <Link
             key={q.id}
-            href={`/planner/question/${q.id}`}
+            href={`${basePath}/${q.id}`}
             className="rounded-2xl bg-neutral-100 p-4 shadow-s transition hover:-translate-y-0.5"
           >
             <div className="flex items-center justify-between gap-3">
@@ -48,9 +73,9 @@ export default function QuestionList({ items }: Props) {
                 {q.status}
               </span>
             </div>
-            <p className="mt-2 text-xs leading-5 text-neutral-500">{q.excerpt}</p>
+            <p className="mt-2 text-xs leading-5 text-neutral-500">{getExcerpt(q.content)}</p>
           </Link>
-        ))}
+          ))}
       </div>
     </section>
   );

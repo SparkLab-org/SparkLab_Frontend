@@ -39,17 +39,6 @@ export default function ListDetailView({ params }: Props) {
     updateTodoMutation.mutate({ id: todo.id, patch: { status: nextStatus } });
   };
 
-  const recordStudySeconds = (elapsedSeconds: number) => {
-    if (!todo) return;
-    if (elapsedSeconds <= 0) return;
-    const secondsToAdd = Math.floor(elapsedSeconds);
-    if (secondsToAdd <= 0) return;
-    updateTodoMutation.mutate({
-      id: todo.id,
-      patch: { studySeconds: (todo.studySeconds ?? 0) + secondsToAdd },
-    });
-  };
-
   return (
     <div className="space-y-4">
       <ListDetailHeader
@@ -62,7 +51,8 @@ export default function ListDetailView({ params }: Props) {
         statusLabel={statusLabel}
         studySeconds={todo?.studySeconds}
         isLocked={isLocked}
-        onRecord={recordStudySeconds}
+        isDone={todo?.status === 'DONE'}
+        todoId={todo?.id ?? ''}
       />
       <GoalMemoCard />
       <MentorFeedbackCard feedback={todo?.feedback} />

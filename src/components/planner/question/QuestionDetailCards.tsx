@@ -1,10 +1,15 @@
-import type { QuestionDetail } from './data';
+import type { Question } from '@/src/lib/types/question';
 
 type Props = {
-  question: QuestionDetail;
+  question: Question;
 };
 
 export default function QuestionDetailCards({ question }: Props) {
+  const answerText =
+    typeof question.answer === 'string' && question.answer.trim().length > 0
+      ? question.answer
+      : '아직 답변이 등록되지 않았어요.';
+
   return (
     <div className="space-y-6">
       <section className="space-y-3 rounded-3xl bg-neutral-100 p-5 ">
@@ -23,7 +28,7 @@ export default function QuestionDetailCards({ question }: Props) {
           <p className="text-sm font-semibold text-neutral-900">답변</p>
           <span className="text-[10px] text-neutral-400">멘토</span>
         </div>
-        <p className="text-sm leading-6 text-neutral-800">{question.answer}</p>
+        <p className="text-sm leading-6 text-neutral-800">{answerText}</p>
       </section>
     </div>
   );

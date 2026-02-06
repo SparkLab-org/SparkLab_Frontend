@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useTimerStore } from '@/src/store/timerStore';
 
 type Props = {
   statusLabel: string;
   studySeconds?: number;
   isLocked: boolean;
-  onRecord: (elapsedSeconds: number) => void;
+  isDone: boolean;
+  todoId: string;
 };
 
 function formatHMS(totalSeconds: number) {
@@ -21,18 +22,12 @@ export default function TaskProgressCard({
   statusLabel,
   studySeconds = 0,
   isLocked,
-  onRecord,
+  isDone,
+  todoId,
 }: Props) {
-  const [isRunning, setIsRunning] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
-  useEffect(() => {
-    if (!isRunning) return undefined;
-    const id = window.setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [isRunning]);
+  const openPanel = useTimerStore((s) => s.openPanel);
+  const setActiveTodoId = useTimerStore((s) => s.setActiveTodoId);
+  const canUseTimer = !isLocked && !isDone && Boolean(todoId);
 
   return (
     <section className="rounded-2xl bg-neutral-100 p-4">
@@ -51,44 +46,20 @@ export default function TaskProgressCard({
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl bg-white p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-neutral-500">타이머</p>
-          <p className="text-sm font-semibold text-neutral-900">{formatHMS(elapsedSeconds)}</p>
-        </div>
-        <div className="mt-3 flex gap-2">
-          <button
-            type="button"
-            onClick={() => setIsRunning((prev) => !prev)}
-            disabled={isLocked}
-            className={[
-              'flex-1 rounded-lg px-3 py-2 text-xs font-semibold',
-              isLocked
-                ? 'cursor-not-allowed bg-neutral-200 text-neutral-400'
-                : 'bg-neutral-900 text-white',
-            ].join(' ')}
-          >
-            {isRunning ? '일시정지' : '시작'}
-          </button>
+      {canUseTimer && (
+        <div className="mt-4 flex justify-end">
           <button
             type="button"
             onClick={() => {
-              setIsRunning(false);
-              onRecord(elapsedSeconds);
-              setElapsedSeconds(0);
+              setActiveTodoId(todoId);
+              openPanel();
             }}
-            disabled={isLocked || elapsedSeconds === 0}
-            className={[
-              'flex-1 rounded-lg border px-3 py-2 text-xs font-semibold',
-              isLocked || elapsedSeconds === 0
-                ? 'cursor-not-allowed border-neutral-200 bg-neutral-100 text-neutral-400'
-                : 'border-neutral-200 bg-white text-neutral-700',
-            ].join(' ')}
+            className="rounded-lg bg-neutral-900 px-4 py-2 text-xs font-semibold text-white"
           >
-            기록하기
+            타이머
           </button>
         </div>
-      </div>
+      )}
     </section>
   );
 }

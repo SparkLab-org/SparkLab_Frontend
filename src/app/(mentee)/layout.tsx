@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import TimerFloatingWidget from '@/src/components/planner/TimerFloatingWidget';
 
 const navItems = [
   { href: '/feedback', label: '피드백' },
@@ -49,6 +50,7 @@ export default function MenteeLayout({ children }: { children: React.ReactNode }
     <div className="mx-auto flex min-h-screen w-full max-w-full lg:max-w-none xl:max-w-6xl flex-col bg-white text-neutral-900">
       <main className="flex-1 px-4 pb-16 pt-6 sm:px-6 lg:px-10">{children}</main>
 
+      <TimerFloatingWidget />
       <Nav />
     </div>
   );
