@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { Todo } from '@/src/lib/types/planner';
-import type { CreateTodoInput, UpdateTodoInput } from '@/src/services/todo.api';
+import type { CreateTodoInput, ListTodosParams, UpdateTodoInput } from '@/src/services/todo.api';
 import {
   createTodo,
   deleteTodo,
@@ -12,12 +11,17 @@ import {
 
 export const todoQueryKeys = {
   all: ['todos'] as const,
+  list: (plannerId?: number | null, planDate?: string | null) =>
+    [...todoQueryKeys.all, 'list', plannerId ?? null, planDate ?? null] as const,
 };
 
-export function useTodosQuery() {
+export function useTodosQuery(params: ListTodosParams = {}) {
+  const plannerId = params.plannerId ?? null;
+  const planDate = params.planDate ?? null;
+
   return useQuery({
-    queryKey: todoQueryKeys.all,
-    queryFn: listTodos,
+    queryKey: todoQueryKeys.list(plannerId, planDate),
+    queryFn: () => listTodos(params),
     initialData: () => getTodoSnapshot(),
   });
 }
@@ -27,11 +31,8 @@ export function useCreateTodoMutation() {
 
   return useMutation({
     mutationFn: (input: CreateTodoInput) => createTodo(input),
-    onSuccess: (created) => {
-      queryClient.setQueryData<Todo[]>(todoQueryKeys.all, (prev) => [
-        created,
-        ...(prev ?? []),
-      ]);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: todoQueryKeys.all });
     },
   });
 }
@@ -43,9 +44,7 @@ export function useUpdateTodoMutation() {
     mutationFn: ({ id, patch }: { id: string; patch: UpdateTodoInput }) => updateTodo(id, patch),
     onSuccess: (updated) => {
       if (!updated) return;
-      queryClient.setQueryData<Todo[]>(todoQueryKeys.all, (prev) =>
-        (prev ?? []).map((todo) => (todo.id === updated.id ? updated : todo))
-      );
+      queryClient.invalidateQueries({ queryKey: todoQueryKeys.all });
     },
   });
 }
@@ -56,10 +55,7 @@ export function useDeleteTodoMutation() {
   return useMutation({
     mutationFn: (id: string) => deleteTodo(id),
     onSuccess: (_, id) => {
-      queryClient.setQueryData<Todo[]>(todoQueryKeys.all, (prev) =>
-        (prev ?? []).filter((todo) => todo.id !== id)
-      );
+      queryClient.invalidateQueries({ queryKey: todoQueryKeys.all });
     },
   });
 }
-

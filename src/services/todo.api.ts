@@ -36,7 +36,12 @@ export type UpdateTodoInput = Partial<
   >
 >;
 
-type TodoApiSubject = 'KOREAN' | 'ENGLISH' | 'MATH' | string;
+export type ListTodosParams = {
+  plannerId?: number;
+  planDate?: string; // YYYY-MM-DD
+};
+
+type TodoApiSubject = 'KOREAN' | 'ENGLISH' | 'MATH' | 'ALL' | string;
 type TodoApiType = 'TASK' | 'ASSIGNMENT' | 'HOMEWORK' | 'STUDY' | string;
 
 type TodoApiItem = {
@@ -56,43 +61,38 @@ type TodoApiItem = {
   feedback?: string | null;
   plannedMinutes?: number;
   actualMinutes?: number;
-  actualSeconds?: number;
   completedAt?: string | null;
   createTime?: string;
   updateTime?: string;
 };
 
 type CreateTodoApiRequest = {
+  plannerId: number;
   title: string;
-  subject: TodoApiSubject;
-  targetDate: string;
-  plannerId?: number;
-  plannedMinutes?: number;
+  subject?: TodoApiSubject;
   type?: TodoApiType;
-  goal?: string | null;
-  assigneeId?: string | null;
-  assigneeName?: string | null;
-  guideFileName?: string | null;
-  guideFileUrl?: string | null;
-  isFixed?: boolean;
+  plannedMinutes?: number;
 };
 
-type UpdateTodoApiRequest = Partial<CreateTodoApiRequest> & {
+type UpdateTodoApiRequest = {
+  title?: string;
+  subject?: TodoApiSubject;
+  type?: TodoApiType;
   status?: string;
+  plannedMinutes?: number;
   actualMinutes?: number;
-  actualSeconds?: number;
   completedAt?: string | null;
-  feedback?: string | null;
 };
 
 const USE_MOCK = process.env.NEXT_PUBLIC_TODO_API_MODE !== 'backend';
-const TODO_BASE_PATH = '/domain/todos';
+const TODO_BASE_PATH = '/todos';
 const DEFAULT_PLANNER_ID = process.env.NEXT_PUBLIC_PLANNER_ID;
 
 const SUBJECT_FROM_API: Record<string, TodoSubject> = {
   KOREAN: '국어',
   ENGLISH: '영어',
   MATH: '수학',
+  ALL: '국어',
 };
 
 const SUBJECT_TO_API: Record<TodoSubject, TodoApiSubject> = {
@@ -176,9 +176,7 @@ function mapTodoFromApi(item: TodoApiItem): Todo {
     status: toTodoStatus(item.status, item.completedAt ?? null),
     subject: toTodoSubject(item.subject),
     studySeconds:
-      typeof item.actualSeconds === 'number'
-        ? Math.round(item.actualSeconds)
-        : typeof item.actualMinutes === 'number'
+      typeof item.actualMinutes === 'number'
         ? Math.round(item.actualMinutes * 60)
         : Math.round((item.plannedMinutes ?? 0) * 60),
     createdAt: toEpochMillis(item.createTime ?? item.updateTime ?? item.completedAt ?? null),
@@ -193,15 +191,27 @@ function resolvePlannerId(): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function buildListQuery(params: ListTodosParams): string {
+  const search = new URLSearchParams();
+  if (typeof params.plannerId === 'number') {
+    search.set('plannerId', String(params.plannerId));
+  }
+  if (params.planDate) {
+    search.set('planDate', params.planDate);
+  }
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
+
 export function getTodoSnapshot(): Todo[] {
   return USE_MOCK ? mockApi.getTodoSnapshot() : [];
 }
 
-export async function listTodos(): Promise<Todo[]> {
+export async function listTodos(params: ListTodosParams = {}): Promise<Todo[]> {
   if (USE_MOCK) return mockApi.listTodos();
 
-  const plannerId = resolvePlannerId();
-  const query = plannerId ? `?plannerId=${plannerId}` : '';
+  const plannerId = params.plannerId ?? resolvePlannerId();
+  const query = buildListQuery({ plannerId, planDate: params.planDate });
   const items = await apiFetch<TodoApiItem[]>(`${TODO_BASE_PATH}${query}`);
   return items.map(mapTodoFromApi);
 }
@@ -221,21 +231,15 @@ export async function getTodo(todoItemId: string | number): Promise<Todo> {
 export async function createTodo(input: CreateTodoInput): Promise<Todo> {
   if (USE_MOCK) return mockApi.createTodo(input);
 
+  const plannerId = resolvePlannerId();
+  if (!plannerId) throw new Error('plannerId is required');
+
   const payload: CreateTodoApiRequest = {
+    plannerId,
     title: input.title,
     subject: toApiSubject(input.subject),
-    targetDate: input.dueDate,
     type: toApiType(input.type),
   };
-  if (input.goal) payload.goal = input.goal;
-  if (input.assigneeId) payload.assigneeId = input.assigneeId;
-  if (input.assigneeName) payload.assigneeName = input.assigneeName;
-  if (input.guideFileName) payload.guideFileName = input.guideFileName;
-  if (input.guideFileUrl) payload.guideFileUrl = input.guideFileUrl;
-  if (typeof input.isFixed === 'boolean') payload.isFixed = input.isFixed;
-
-  const plannerId = resolvePlannerId();
-  if (plannerId) payload.plannerId = plannerId;
 
   const created = await apiFetch<TodoApiItem>(TODO_BASE_PATH, {
     method: 'POST',
@@ -254,27 +258,18 @@ export async function updateTodo(
   const payload: UpdateTodoApiRequest = {};
   if (patch.title) payload.title = patch.title;
   if (patch.subject) payload.subject = toApiSubject(patch.subject);
+  if (patch.type) payload.type = toApiType(patch.type);
   if (patch.status) payload.status = toApiStatus(patch.status);
   if (typeof patch.studySeconds === 'number') {
-    payload.actualSeconds = Math.floor(patch.studySeconds);
     payload.actualMinutes = Math.floor(patch.studySeconds / 60);
   }
-  if (patch.dueDate) payload.targetDate = patch.dueDate;
-  if (patch.type) payload.type = toApiType(patch.type);
-  if (patch.feedback !== undefined) payload.feedback = patch.feedback;
-  if (patch.goal !== undefined) payload.goal = patch.goal ?? null;
-  if (patch.assigneeId !== undefined) payload.assigneeId = patch.assigneeId ?? null;
-  if (patch.assigneeName !== undefined) payload.assigneeName = patch.assigneeName ?? null;
-  if (patch.guideFileName !== undefined) payload.guideFileName = patch.guideFileName ?? null;
-  if (patch.guideFileUrl !== undefined) payload.guideFileUrl = patch.guideFileUrl ?? null;
-  if (typeof patch.isFixed === 'boolean') payload.isFixed = patch.isFixed;
 
   if (Object.keys(payload).length === 0) {
     return null;
   }
 
   const updated = await apiFetch<TodoApiItem>(`${TODO_BASE_PATH}/${todoItemId}`, {
-    method: 'PATCH',
+    method: 'PUT',
     body: JSON.stringify(payload),
   });
 
