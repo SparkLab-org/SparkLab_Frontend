@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
+import { ChevronLeft } from 'lucide-react';
 
 function getPageTitle(pathname: string) {
   if (pathname.startsWith('/planner/calendar')) return '계획표';
@@ -23,12 +24,12 @@ export default function PlannerLayout({ children }: { children: React.ReactNode 
           <button
             type="button"
             onClick={() => router.back()}
-            className="inline-flex h-8 w-8 items-center justify-center text-l text-neutral-600"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-neutral-600 hover:bg-neutral-100"
             aria-label="뒤로"
           >
-            &lt;
+            <ChevronLeft className="h-5 w-5" aria-hidden />
           </button>
-          <span>{title}</span>
+          {/* <span>{title}</span> */}
         </header>
       )}
       {children}

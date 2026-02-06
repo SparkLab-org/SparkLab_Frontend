@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { TodoStatus } from '@/src/lib/types/planner';
 
 type Props = {
-  status?: TodoStatus;
+  statusLabel: string;
   studyMinutes?: number;
+  isLocked: boolean;
   onRecord: (elapsedSeconds: number) => void;
 };
 
@@ -24,7 +24,12 @@ function formatMinutes(totalMinutes: number) {
   return `${hours}:${String(minutes).padStart(2, '0')}:00`;
 }
 
-export default function TaskProgressCard({ status, studyMinutes = 0, onRecord }: Props) {
+export default function TaskProgressCard({
+  statusLabel,
+  studyMinutes = 0,
+  isLocked,
+  onRecord,
+}: Props) {
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
@@ -42,7 +47,7 @@ export default function TaskProgressCard({ status, studyMinutes = 0, onRecord }:
         <div>
           <p className="text-xs font-semibold text-neutral-500">과제 진행</p>
           <p className="mt-1 text-sm font-semibold text-neutral-900">
-            {status === 'DONE' ? '완료' : '진행중'}
+            {statusLabel}
           </p>
         </div>
         <div className="text-right">
@@ -62,7 +67,13 @@ export default function TaskProgressCard({ status, studyMinutes = 0, onRecord }:
           <button
             type="button"
             onClick={() => setIsRunning((prev) => !prev)}
-            className="flex-1 rounded-lg bg-neutral-900 px-3 py-2 text-xs font-semibold text-white"
+            disabled={isLocked}
+            className={[
+              'flex-1 rounded-lg px-3 py-2 text-xs font-semibold',
+              isLocked
+                ? 'cursor-not-allowed bg-neutral-200 text-neutral-400'
+                : 'bg-neutral-900 text-white',
+            ].join(' ')}
           >
             {isRunning ? '일시정지' : '시작'}
           </button>
@@ -73,7 +84,13 @@ export default function TaskProgressCard({ status, studyMinutes = 0, onRecord }:
               onRecord(elapsedSeconds);
               setElapsedSeconds(0);
             }}
-            className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700"
+            disabled={isLocked || elapsedSeconds === 0}
+            className={[
+              'flex-1 rounded-lg border px-3 py-2 text-xs font-semibold',
+              isLocked || elapsedSeconds === 0
+                ? 'cursor-not-allowed border-neutral-200 bg-neutral-100 text-neutral-400'
+                : 'border-neutral-200 bg-white text-neutral-700',
+            ].join(' ')}
           >
             기록하기
           </button>

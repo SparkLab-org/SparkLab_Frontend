@@ -6,6 +6,7 @@ import { usePlannerStore } from '@/src/store/plannerStore';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useTodosQuery } from '@/src/hooks/todoQueries';
+import { getTodoStatusLabel } from '@/src/lib/utils/todoStatus';
 
 export default function TodayTodoSummary() {
   const selectedDate = usePlannerStore((s) => s.selectedDate);
@@ -15,7 +16,14 @@ export default function TodayTodoSummary() {
     return todos
       .filter((todo) => todo.dueDate === selectedDate)
       .slice()
-      .sort((a, b) => a.dueTime.localeCompare(b.dueTime));
+      .sort((a, b) => {
+        if (a.status === b.status) {
+          return a.dueTime.localeCompare(b.dueTime);
+        }
+        if (a.status === 'DONE') return 1;
+        if (b.status === 'DONE') return -1;
+        return 0;
+      });
   }, [todos, selectedDate]);
 
   const titleText = useMemo(() => {
@@ -59,12 +67,15 @@ export default function TodayTodoSummary() {
               <span
                 className={[
                   'rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                  todo.status === 'DONE'
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-neutral-200 text-neutral-600',
+                  (() => {
+                    const label = getTodoStatusLabel(todo);
+                    if (label === '지각' || label === '미제출') return 'bg-rose-100 text-rose-600';
+                    if (label === '완료') return 'bg-emerald-100 text-emerald-700';
+                    return 'bg-neutral-200 text-neutral-600';
+                  })(),
                 ].join(' ')}
               >
-                {todo.status === 'DONE' ? '완료' : '해야 함'}
+                {getTodoStatusLabel(todo)}
               </span>
             </div>
           </Link>

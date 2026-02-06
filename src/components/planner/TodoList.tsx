@@ -43,6 +43,17 @@ export default function TodoList() {
     return items;
   }, [todayTodos, activeSubject, activeType]);
 
+  const { activeTodos, doneTodos } = useMemo(() => {
+    return filteredTodos.reduce(
+      (acc, todo) => {
+        if (todo.status === 'DONE') acc.doneTodos.push(todo);
+        else acc.activeTodos.push(todo);
+        return acc;
+      },
+      { activeTodos: [] as typeof filteredTodos, doneTodos: [] as typeof filteredTodos }
+    );
+  }, [filteredTodos]);
+
   return (
     <section className="space-y-5">
       <div className="flex items-center justify-center">
@@ -114,14 +125,37 @@ export default function TodoList() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {filteredTodos.map((todo) => (
-            <TodoItem
-              key={todo.id}
-              todo={todo}
-              onToggle={toggleTodo}
-              variant="compact"
-            />
-          ))}
+          {activeTodos.length > 0 && (
+            <div className="grid gap-4">
+              {activeTodos.map((todo) => (
+                <TodoItem
+                  key={todo.id}
+                  todo={todo}
+                  onToggle={toggleTodo}
+                  variant="compact"
+                />
+              ))}
+            </div>
+          )}
+
+          {doneTodos.length > 0 && (
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-neutral-600">완료한 할 일</p>
+                <span className="text-xs font-semibold text-neutral-400">{doneTodos.length}개</span>
+              </div>
+              <div className="grid gap-4">
+                {doneTodos.map((todo) => (
+                  <TodoItem
+                    key={todo.id}
+                    todo={todo}
+                    onToggle={toggleTodo}
+                    variant="compact"
+                  />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       )}
     </section>
