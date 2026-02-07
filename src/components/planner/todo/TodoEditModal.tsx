@@ -1,28 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { useCreateTodoMutation } from '@/src/hooks/todoQueries';
-import type { TodoSubject } from '@/src/lib/types/planner';
+import { useUpdateTodoMutation } from '@/src/hooks/todoQueries';
+import type { Todo, TodoSubject } from '@/src/lib/types/planner';
 
 type Props = {
+  todo: Todo;
   onClose: () => void;
-  initialDate: string;
 };
 
-function todayISO(): string {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-export default function TodoCreateModal({ onClose, initialDate }: Props) {
-  const createTodoMutation = useCreateTodoMutation();
-  const [title, setTitle] = useState('');
-  const [subject, setSubjectState] = useState<TodoSubject>('국어');
-  const [dueDate, setDueDate] = useState(initialDate || todayISO());
-  const [dueTime, setDueTime] = useState('23:59');
+export default function TodoEditModal({ todo, onClose }: Props) {
+  const updateTodoMutation = useUpdateTodoMutation();
+  const [title, setTitle] = useState(todo.title);
+  const [subject, setSubject] = useState<TodoSubject>(todo.subject);
   const [error, setError] = useState('');
 
   const closeModal = () => {
@@ -33,18 +23,12 @@ export default function TodoCreateModal({ onClose, initialDate }: Props) {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = title.trim();
-    const dateValue = dueDate.trim();
-    const timeValue = dueTime.trim();
     if (!trimmed) {
       setError('할 일을 입력해 주세요.');
       return;
     }
-    if (!dateValue || !timeValue) {
-      setError('마감 날짜와 시간을 선택해 주세요.');
-      return;
-    }
-    createTodoMutation.mutate(
-      { title: trimmed, subject, dueDate: dateValue, dueTime: timeValue, type: '학습' },
+    updateTodoMutation.mutate(
+      { id: todo.id, patch: { title: trimmed, subject } },
       { onSuccess: () => closeModal() }
     );
   };
@@ -64,8 +48,8 @@ export default function TodoCreateModal({ onClose, initialDate }: Props) {
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-lg font-semibold text-neutral-900">할 일 추가</p>
-            <p className="mt-1 text-sm text-neutral-500">언제까지 완료할지 설정해 주세요.</p>
+            <p className="text-lg font-semibold text-neutral-900">할 일 수정</p>
+            <p className="mt-1 text-sm text-neutral-500">제목, 유형, 과목을 수정할 수 있어요.</p>
           </div>
           <button
             type="button"
@@ -92,7 +76,7 @@ export default function TodoCreateModal({ onClose, initialDate }: Props) {
             <label className="text-xs font-semibold text-neutral-600">과목</label>
             <select
               value={subject}
-              onChange={(e) => setSubjectState(e.target.value as TodoSubject)}
+              onChange={(e) => setSubject(e.target.value as TodoSubject)}
               className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-900"
               aria-label="과목 선택"
             >
@@ -100,24 +84,6 @@ export default function TodoCreateModal({ onClose, initialDate }: Props) {
               <option value="영어">영어</option>
               <option value="수학">수학</option>
             </select>
-          </div>
-
-          <div className="grid gap-2">
-            <label className="text-xs font-semibold text-neutral-600">언제까지</label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900"
-              />
-              <input
-                type="time"
-                value={dueTime}
-                onChange={(e) => setDueTime(e.target.value)}
-                className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900"
-              />
-            </div>
           </div>
 
           {error && <p className="text-xs text-red-500">{error}</p>}
@@ -134,7 +100,7 @@ export default function TodoCreateModal({ onClose, initialDate }: Props) {
               type="submit"
               className="flex-1 rounded-xl bg-neutral-900 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5"
             >
-              추가
+              저장
             </button>
           </div>
         </form>

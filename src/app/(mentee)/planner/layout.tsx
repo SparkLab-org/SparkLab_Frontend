@@ -4,8 +4,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 
 function getPageTitle(pathname: string) {
+  if (pathname.startsWith('/planner/assignments')) return '과제';
   if (pathname.startsWith('/planner/calendar')) return '계획표';
-  if (pathname.startsWith('/planner/list')) return '오늘의 할일';
+  if (pathname.startsWith('/planner/list')) return '학습';
   if (pathname.startsWith('/planner/question')) return '질문';
   if (pathname.startsWith('/planner/')) return '할 일';
   return '';

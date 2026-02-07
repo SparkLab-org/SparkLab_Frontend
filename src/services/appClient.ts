@@ -24,6 +24,8 @@ export async function apiFetch<T>(
     },
   });
 
+  console.log('API_BASE_URL', API_BASE_URL, 'path', path);
+
   // 🔥 401 공통 처리
   if (res.status === 401) {
     localStorage.removeItem('accessToken');
@@ -37,5 +39,4 @@ export async function apiFetch<T>(
   }
 
   return res.json() as Promise<T>;
-  console.log('API_BASE_URL', API_BASE_URL, 'path', path);
 }

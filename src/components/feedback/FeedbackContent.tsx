@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTodosQuery } from "@/src/hooks/todoQueries";
+import { getTodoSnapshot as getMockTodoSnapshot } from "@/src/services/todo.mock";
 import FeedbackHeaderActions from "./FeedbackHeaderActions";
 import FeedbackList from "./FeedbackList";
 import FeedbackSortBar from "./FeedbackSortBar";
@@ -79,7 +80,8 @@ export default function FeedbackContent({ title }: Props) {
   }, []);
 
   const feedbackItems = useMemo(() => {
-    const filtered = todos.filter(
+    const sourceTodos = todos.length > 0 ? todos : getMockTodoSnapshot();
+    const filtered = sourceTodos.filter(
       (todo) => typeof todo.feedback === "string" && todo.feedback.trim().length > 0
     );
     const subjectFiltered =

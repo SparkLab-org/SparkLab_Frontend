@@ -9,6 +9,7 @@ type Props = {
   todo: Todo;
   onToggle: (id: string) => void;
   onRemove?: (id: string) => void;
+  onEdit?: (id: string) => void;
   onUpdate?: (id: string, title: string, subject: TodoSubject) => void;
   variant?: 'default' | 'compact';
 };
@@ -17,6 +18,7 @@ export default function TodoItem({
   todo,
   onToggle,
   onRemove,
+  onEdit,
   onUpdate,
   variant = 'default',
 }: Props) {
@@ -24,8 +26,12 @@ export default function TodoItem({
   const todoType = getTodoType(todo);
   const statusLabel = getTodoStatusLabel(todo);
   const overdueTask = isOverdueTask(todo);
-  const lockUncheck = todo.isFixed && isDone;
+  const lockUncheck = todo.isFixed;
+  const detailHref = todo.isFixed
+    ? `/planner/assignments/${todo.id}`
+    : `/planner/list/${todo.id}`;
   const [editing, setEditing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState(todo.title);
   const [draftSubject, setDraftSubject] = useState<TodoSubject>(todo.subject);
 
@@ -68,7 +74,7 @@ export default function TodoItem({
               {isDone ? '✓' : ''}
             </label>
             <Link
-              href={`/planner/list/${todo.id}`}
+              href={detailHref}
               className="truncate text-sm font-semibold text-neutral-900"
             >
               {todo.title}
@@ -89,13 +95,51 @@ export default function TodoItem({
               {statusLabel}
             </span>
           </div>
-          <Link
-            href={`/planner/list/${todo.id}`}
-            className="text-neutral-300"
-            aria-label="상세 이동"
-          >
-            ›
-          </Link>
+          <div className="relative flex items-center gap-2">
+            {!todo.isFixed && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-neutral-500 hover:bg-white"
+                  aria-label="메뉴"
+                >
+                  ⋯
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-8 top-0 z-10 w-28 rounded-xl border border-neutral-200 bg-white p-1 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onEdit?.(todo.id);
+                      }}
+                      className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
+                    >
+                      수정
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onRemove?.(todo.id);
+                      }}
+                      className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-rose-500 hover:bg-rose-50"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+            <Link
+              href={detailHref}
+              className="text-neutral-300"
+              aria-label="상세 이동"
+            >
+              ›
+            </Link>
+          </div>
         </div>
         {todo.feedback && todo.feedback.trim().length > 0 && (
           <div className="mt-3 rounded-2xl bg-neutral-300 px-3 py-2 font-semibold text-xs text-black line-clamp-2">
@@ -150,7 +194,7 @@ export default function TodoItem({
               />
             ) : (
               <Link
-                href={`/planner/list/${todo.id}`}
+                href={detailHref}
                 className={[
                   'truncate text-sm font-semibold',
                   isDone ? 'text-neutral-400 line-through' : 'text-neutral-900',

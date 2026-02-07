@@ -1,18 +1,35 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useTodosQuery, useUpdateTodoMutation } from '@/src/hooks/todoQueries';
+import {
+  useDeleteTodoMutation,
+  useTodosQuery,
+  useUpdateTodoMutation,
+} from '@/src/hooks/todoQueries';
 import { usePlannerStore } from '@/src/store/plannerStore';
 import type { TodoSubject } from '@/src/lib/types/planner';
 import TodoItem from './TodoItem';
 import TodoCreateModal from './TodoCreateModal';
+import TodoEditModal from './TodoEditModal';
 
 type SubjectFilter = '전체' | TodoSubject;
+type FilterMode = 'all' | 'study' | 'assignment';
 
-export default function TodoList() {
+type Props = {
+  filterMode?: FilterMode;
+  title?: string;
+  showCreate?: boolean;
+};
+
+export default function TodoList({
+  filterMode = 'all',
+  title = '오늘의 할일',
+  showCreate = true,
+}: Props) {
   const selectedDate = usePlannerStore((s) => s.selectedDate);
   const { data: todos = [] } = useTodosQuery();
   const updateTodoMutation = useUpdateTodoMutation();
+  const deleteTodoMutation = useDeleteTodoMutation();
 
   const toggleTodo = (id: string) => {
     const current = todos.find((todo) => todo.id === id);
@@ -22,13 +39,20 @@ export default function TodoList() {
   };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
   const [activeSubject, setActiveSubject] = useState<SubjectFilter>('전체');
   const [activeType, setActiveType] = useState<'전체' | '과제' | '학습'>('전체');
 
   const subjects: SubjectFilter[] = ['전체', '국어', '수학', '영어'];
 
   const todayTodos = useMemo(
-    () => todos.filter((todo) => todo.dueDate === selectedDate),
+    () =>
+      todos.filter((todo) => {
+        if (todo.dueDate !== selectedDate) return false;
+        if (filterMode === 'assignment') return todo.isFixed;
+        if (filterMode === 'study') return !todo.isFixed;
+        return true;
+      }),
     [todos, selectedDate]
   );
 
@@ -53,6 +77,18 @@ export default function TodoList() {
       { activeTodos: [] as typeof filteredTodos, doneTodos: [] as typeof filteredTodos }
     );
   }, [filteredTodos]);
+
+  const editingTodo = editingTodoId
+    ? todos.find((todo) => todo.id === editingTodoId) ?? null
+    : null;
+
+  const handleRemove = (id: string) => {
+    const target = todos.find((todo) => todo.id === id);
+    if (!target || target.isFixed) return;
+    const ok = window.confirm('이 할 일을 삭제할까요?');
+    if (!ok) return;
+    deleteTodoMutation.mutate(id);
+  };
 
   return (
     <section className="space-y-5">
@@ -80,15 +116,17 @@ export default function TodoList() {
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-neutral-900">오늘의 할일</h2>
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex h-8 w-8 items-center justify-center text-3xl font-medium text-black"
-          aria-label="추가하기"
-        >
-          +
-        </button>
+        <h2 className="text-2xl font-semibold text-neutral-900">{title}</h2>
+        {showCreate && (
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex h-8 w-8 items-center justify-center text-3xl font-medium text-black"
+            aria-label="추가하기"
+          >
+            +
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-2 text-xs font-semibold text-neutral-500">
@@ -119,6 +157,13 @@ export default function TodoList() {
         />
       )}
 
+      {editingTodo && (
+        <TodoEditModal
+          todo={editingTodo}
+          onClose={() => setEditingTodoId(null)}
+        />
+      )}
+
       {filteredTodos.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 px-4 py-6 text-center text-sm text-neutral-500">
           등록된 할 일이 없어요.
@@ -132,6 +177,8 @@ export default function TodoList() {
                   key={todo.id}
                   todo={todo}
                   onToggle={toggleTodo}
+                  onEdit={(id) => setEditingTodoId(id)}
+                  onRemove={handleRemove}
                   variant="compact"
                 />
               ))}
@@ -150,6 +197,8 @@ export default function TodoList() {
                     key={todo.id}
                     todo={todo}
                     onToggle={toggleTodo}
+                    onEdit={(id) => setEditingTodoId(id)}
+                    onRemove={handleRemove}
                     variant="compact"
                   />
                 ))}
