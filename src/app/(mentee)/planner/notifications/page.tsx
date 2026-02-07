@@ -1,8 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
-import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { useNotificationsQuery } from '@/src/hooks/notificationQueries';
+import NotificationEmpty from '@/src/components/planner/notifications/NotificationEmpty';
+import NotificationList from '@/src/components/planner/notifications/NotificationList';
+import NotificationLoginHint from '@/src/components/planner/notifications/NotificationLoginHint';
+
+const READ_STORAGE_KEY = 'notification-read';
 
 export default function NotificationsPage() {
   const accountId = useMemo(() => {
@@ -13,13 +17,39 @@ export default function NotificationsPage() {
   }, []);
 
   const { data: notifications = [] } = useNotificationsQuery(accountId);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const raw = window.localStorage.getItem(READ_STORAGE_KEY);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setReadIds(new Set(parsed.map((id) => String(id))));
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }, []);
+
+  const persistRead = (next: Set<string>) => {
+    setReadIds(next);
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(Array.from(next)));
+  };
+
+  const markRead = (id: string) => {
+    if (readIds.has(id)) return;
+    const next = new Set(readIds);
+    next.add(id);
+    persistRead(next);
+  };
 
   if (!accountId) {
     return (
       <section className="space-y-3">
-        <div className="rounded-3xl bg-neutral-100 p-4 text-sm text-neutral-600">
-          로그인 후 알림을 확인할 수 있어요.
-        </div>
+        <NotificationLoginHint />
       </section>
     );
   }
@@ -27,47 +57,13 @@ export default function NotificationsPage() {
   return (
     <section className="space-y-3">
       {notifications.length === 0 ? (
-        <div className="rounded-3xl bg-neutral-100 p-4 text-sm text-neutral-600">
-          새로운 알림이 없어요.
-        </div>
+        <NotificationEmpty />
       ) : (
-        <div className="grid gap-3">
-          {notifications.map((item) => {
-            const linkType = (item.linkType ?? '').toUpperCase();
-            const link =
-              linkType === 'TODO' && typeof item.linkId === 'number'
-                ? `/planner/list/${item.linkId}`
-              : linkType === 'ASSIGNMENT' && typeof item.linkId === 'number'
-                ? `/planner/assignments/${item.linkId}`
-              : linkType === 'FEEDBACK' && typeof item.linkId === 'number'
-                ? `/feedback/${item.linkId}`
-              : linkType === 'QUESTION' && typeof item.linkId === 'number'
-                ? `/planner/question`
-              : linkType === 'MENTEE' && typeof item.linkId === 'number'
-                ? `/mentor/mentee/${item.linkId}`
-              : null;
-
-            const content = (
-              <div className="rounded-3xl bg-[#F5F5F5] p-4">
-                <p className="text-sm font-semibold text-neutral-900">{item.title ?? '알림'}</p>
-                <p className="mt-1 text-xs text-neutral-500">{item.type ?? ''}</p>
-              </div>
-            );
-
-            return link ? (
-              <Link key={item.id} href={link} className="block">
-                {content}
-              </Link>
-            ) : (
-              <div key={item.id}>
-                {content}
-                <p className="mt-2 text-[11px] text-neutral-400">
-                  이동할 수 있는 링크가 없습니다.
-                </p>
-              </div>
-            );
-          })}
-        </div>
+        <NotificationList
+          notifications={notifications}
+          readIds={readIds}
+          onMarkRead={markRead}
+        />
       )}
     </section>
   );
