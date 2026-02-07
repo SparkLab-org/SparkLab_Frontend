@@ -5,6 +5,7 @@ type Props = {
   roleLabel: string;
   totalStudySeconds: number;
   activeLevel?: 'NORMAL' | 'WARNING' | 'DANGER';
+  onOpenLevelInfo?: () => void;
 };
 
 function formatTimeFromSeconds(totalSeconds: number) {
@@ -32,6 +33,7 @@ export default function MyProfileCard({
   roleLabel,
   totalStudySeconds,
   activeLevel,
+  onOpenLevelInfo,
 }: Props) {
   return (
     <section className="flex items-center justify-between rounded-3xl px-4 py-3">
@@ -51,6 +53,16 @@ export default function MyProfileCard({
             >
               {getLevelLabel(activeLevel)}
             </p>
+            {onOpenLevelInfo && (
+              <button
+                type="button"
+                onClick={onOpenLevelInfo}
+                className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-neutral-200 text-[10px] font-semibold text-neutral-500 hover:border-neutral-300 hover:text-neutral-700"
+                aria-label="멘티 레벨 기준 안내"
+              >
+                ?
+              </button>
+            )}
           </div>
         </div>
       </div>

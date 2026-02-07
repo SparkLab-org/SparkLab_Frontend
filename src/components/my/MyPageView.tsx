@@ -11,6 +11,7 @@ import MyHeader from './MyHeader';
 import MyHelpButton from './MyHelpButton';
 import MyProfileCard from './MyProfileCard';
 import MySettingsList from './MySettingsList';
+import MenteeLevelInfoModal from './MenteeLevelInfoModal';
 
 export default function MyPageView() {
   const logout = useAuthStore((s) => s.logout);
@@ -18,6 +19,7 @@ export default function MyPageView() {
   const [activeTab, setActiveTab] = useState<MyAchievementTab>('routine');
   const [accountId, setAccountId] = useState('OOO');
   const [activeLevel, setActiveLevel] = useState<'NORMAL' | 'WARNING' | 'DANGER'>('NORMAL');
+  const [isLevelInfoOpen, setIsLevelInfoOpen] = useState(false);
 
   const { monthPercent, monthDoneCount, monthTotalCount } = useMemo(() => {
     const monthKey = format(new Date(), 'yyyy-MM');
@@ -65,6 +67,7 @@ export default function MyPageView() {
         roleLabel="멘티"
         totalStudySeconds={totalStudySeconds}
         activeLevel={activeLevel}
+        onOpenLevelInfo={() => setIsLevelInfoOpen(true)}
       />
       <MyAchievementCard
         monthPercent={monthPercent}
@@ -76,6 +79,7 @@ export default function MyPageView() {
       <MySettingsList />
       <MyAccountActions onLogout={logout} onWithdraw={handleWithdraw} />
       <MyHelpButton onClick={handleHelp} />
+      {isLevelInfoOpen && <MenteeLevelInfoModal onClose={() => setIsLevelInfoOpen(false)} />}
     </div>
   );
 }
