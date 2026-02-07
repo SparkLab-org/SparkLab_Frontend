@@ -30,8 +30,10 @@ export async function apiFetch<T>(
   // 🔥 401 공통 처리
   if (res.status === 401) {
     localStorage.removeItem('accessToken');
-    // 실제 프로젝트에선 router.push('/login') 권장
-    window.location.href = '/login';
+    if (typeof window !== 'undefined') {
+      window.alert('세션이 만료되었습니다. 다시 로그인해 주세요.');
+    }
+    window.location.href = '/';
     throw new Error('Unauthorized');
   }
 

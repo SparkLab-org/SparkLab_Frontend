@@ -2,10 +2,19 @@
 
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import type { Todo } from "@/src/lib/types/planner";
+type FeedbackListItem = {
+  id: string;
+  todoItemId?: number;
+  title: string;
+  subject?: string;
+  feedback?: string | null;
+  type?: string;
+  isFixed?: boolean;
+  status?: string;
+};
 
 type Props = {
-  items: Todo[];
+  items: FeedbackListItem[];
   isUnread: (id: string) => boolean;
   onMarkRead: (id: string) => void;
 };
@@ -23,10 +32,18 @@ export default function FeedbackList({ items, isUnread, onMarkRead }: Props) {
     <div className="grid gap-4">
       {items.map((todo) => {
         const typeLabel = todo.type ?? (todo.isFixed ? "과제" : "학습");
+        const statusLabel = todo.status
+          ? todo.status === "DONE"
+            ? "완료"
+            : "진행중"
+          : null;
+        const detailHref = todo.todoItemId
+          ? `/feedback/${todo.todoItemId}`
+          : `/feedback/${todo.id}`;
         return (
           <Link
             key={todo.id}
-            href={`/planner/list/${todo.id}`}
+            href={detailHref}
             className="group rounded-3xl bg-neutral-100 px-4 py-4 transition hover:shadow-sm"
             onClick={() => onMarkRead(todo.id)}
           >
@@ -36,6 +53,11 @@ export default function FeedbackList({ items, isUnread, onMarkRead }: Props) {
                 <span className="rounded-full bg-purple-100 px-2 py-0.5 text-purple-500">
                   {typeLabel}
                 </span>
+                {statusLabel && (
+                  <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-neutral-600">
+                    {statusLabel}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 {isUnread(todo.id) && <span className="h-2 w-2 rounded-full bg-rose-500" />}

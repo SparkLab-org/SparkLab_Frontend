@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTodosQuery } from "@/src/hooks/todoQueries";
+import { useFeedbacksQuery } from "@/src/hooks/feedbackQueries";
 import { getTodoSnapshot as getMockTodoSnapshot } from "@/src/services/todo.mock";
 import FeedbackHeaderActions from "./FeedbackHeaderActions";
 import FeedbackList from "./FeedbackList";
@@ -57,6 +58,7 @@ const feedbackReadStore = (() => {
 
 export default function FeedbackContent({ title }: Props) {
   const { data: todos = [] } = useTodosQuery();
+  const { data: feedbacks = [] } = useFeedbacksQuery();
   const [activeSubject, setActiveSubject] = useState<SubjectFilter>("전체");
   const rawReadIds = useSyncExternalStore(
     feedbackReadStore.subscribe,
@@ -81,15 +83,29 @@ export default function FeedbackContent({ title }: Props) {
 
   const feedbackItems = useMemo(() => {
     const sourceTodos = todos.length > 0 ? todos : getMockTodoSnapshot();
-    const filtered = sourceTodos.filter(
-      (todo) => typeof todo.feedback === "string" && todo.feedback.trim().length > 0
-    );
+    const todoById = new Map(sourceTodos.map((todo) => [todo.id, todo]));
+    const mapped = feedbacks.map((feedback) => {
+      const todo = feedback.todoItemId
+        ? todoById.get(String(feedback.todoItemId))
+        : undefined;
+      return {
+        id: feedback.id,
+        todoItemId: feedback.todoItemId,
+        title: todo?.title ?? feedback.summary ?? "피드백",
+        subject: todo?.subject ?? "국어",
+        feedback: feedback.content ?? feedback.summary ?? "",
+        type: todo?.type ?? (todo?.isFixed ? "과제" : "학습"),
+        isFixed: todo?.isFixed ?? false,
+        status: todo?.status,
+        createdAt: todo?.createdAt ?? Date.now(),
+      };
+    });
     const subjectFiltered =
       activeSubject === "전체"
-        ? filtered
-        : filtered.filter((todo) => todo.subject === activeSubject);
+        ? mapped
+        : mapped.filter((item) => item.subject === activeSubject);
     return subjectFiltered.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
-  }, [todos, activeSubject]);
+  }, [todos, feedbacks, activeSubject]);
 
   const unreadCount = useMemo(
     () => feedbackItems.filter((item) => !readIds.has(item.id)).length,

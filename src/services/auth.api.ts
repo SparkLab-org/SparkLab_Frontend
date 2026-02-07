@@ -4,20 +4,19 @@ import { apiFetch } from './appClient';
  * 백엔드 type.ts와 1:1로 맞춘 타입
  */
 export interface SignInReq {
-  loginId: string;
-  loginPw: string;
+  accountId: string;
+  password: string;
 }
 
 export interface SignInRes {
-  accessToken?: string;
-  token?: string;
+  accessToken: string;
 }
 
 /**
- * POST /auth/login
+ * POST /auth/signin
  */
 export async function signIn(req: SignInReq): Promise<SignInRes> {
-  return apiFetch<SignInRes>('/auth/login', {
+  return apiFetch<SignInRes>('/auth/signin', {
     method: 'POST',
     body: JSON.stringify(req),
   });

@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useMemo } from 'react';
 import TimerFloatingWidget from '@/src/components/planner/TimerFloatingWidget';
+import { useAuthStore } from '@/src/store/authStore';
 
 const navItems = [
   { href: '/feedback', label: '피드백' },
@@ -46,6 +48,22 @@ function Nav() {
 }
 
 export default function MenteeLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const role = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const stored = window.localStorage.getItem('role');
+    return stored ? stored.toUpperCase() : null;
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (role && role !== 'MENTEE') {
+      router.replace('/mentor');
+    }
+  }, [isAuthenticated, role, router, pathname]);
+
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-full lg:max-w-none xl:max-w-6xl flex-col bg-white text-neutral-900">
       <main className="flex-1 px-4 pb-16 pt-6 sm:px-6 lg:px-10">{children}</main>

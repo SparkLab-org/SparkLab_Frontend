@@ -187,6 +187,13 @@ function mapTodoFromApi(item: TodoApiItem): Todo {
 }
 
 function resolvePlannerId(): number | undefined {
+  if (typeof window !== 'undefined') {
+    const stored = window.localStorage.getItem('plannerId');
+    if (stored) {
+      const parsed = Number(stored);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
   if (!DEFAULT_PLANNER_ID) return undefined;
   const parsed = Number(DEFAULT_PLANNER_ID);
   return Number.isFinite(parsed) ? parsed : undefined;
@@ -233,7 +240,7 @@ export async function createTodo(input: CreateTodoInput): Promise<Todo> {
   if (USE_MOCK) return mockApi.createTodo(input);
 
   const plannerId = resolvePlannerId();
-  if (!plannerId) throw new Error('plannerId is required');
+  if (plannerId === undefined) throw new Error('plannerId is required');
 
   const payload: CreateTodoApiRequest = {
     plannerId,
@@ -262,7 +269,8 @@ export async function updateTodo(
   if (patch.type) payload.type = toApiType(patch.type);
   if (patch.status) payload.status = toApiStatus(patch.status);
   if (typeof patch.studySeconds === 'number') {
-    payload.actualMinutes = Math.floor(patch.studySeconds / 60);
+    const minutes = Math.ceil(patch.studySeconds / 60);
+    payload.actualMinutes = Math.max(1, minutes);
   }
 
   if (Object.keys(payload).length === 0) {
@@ -318,7 +326,8 @@ export async function updateFixedTodo(
   if (patch.type) payload.type = toApiType(patch.type);
   if (patch.status) payload.status = toApiStatus(patch.status);
   if (typeof patch.studySeconds === 'number') {
-    payload.actualMinutes = Math.floor(patch.studySeconds / 60);
+    const minutes = Math.ceil(patch.studySeconds / 60);
+    payload.actualMinutes = Math.max(1, minutes);
   }
 
   if (Object.keys(payload).length === 0) {

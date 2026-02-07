@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 
 import { useTodosQuery } from '@/src/hooks/todoQueries';
@@ -16,6 +16,7 @@ export default function MyPageView() {
   const logout = useAuthStore((s) => s.logout);
   const { data: todos = [] } = useTodosQuery();
   const [activeTab, setActiveTab] = useState<MyAchievementTab>('routine');
+  const [accountId, setAccountId] = useState('OOO');
 
   const { monthPercent, monthDoneCount, monthTotalCount } = useMemo(() => {
     const monthKey = format(new Date(), 'yyyy-MM');
@@ -43,10 +44,18 @@ export default function MyPageView() {
     window.alert('준비중이에요.');
   };
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem('accountId');
+    if (stored && stored.trim().length > 0) {
+      setAccountId(stored);
+    }
+  }, []);
+
   return (
     <div className="mx-auto max-w-md space-y-5 pb-16">
       <MyHeader />
-      <MyProfileCard name="OOO" roleLabel="OOO 멘티" totalStudySeconds={totalStudySeconds} />
+      <MyProfileCard name={accountId} roleLabel="멘티" totalStudySeconds={totalStudySeconds} />
       <MyAchievementCard
         monthPercent={monthPercent}
         monthDoneCount={monthDoneCount}

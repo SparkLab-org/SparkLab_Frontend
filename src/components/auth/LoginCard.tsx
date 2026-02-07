@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { useState } from 'react';
 import { signIn } from '@/src/services/auth.api';
+import { getMe } from '@/src/services/auth.me.api';
 import { useAuthStore } from '@/src/store/authStore';
 
 
@@ -44,18 +45,34 @@ export default function LoginCard({ role, onRoleChange }: Props) {
     setError('');
 
     try {
-      const res = await signIn({ loginId: accountId, loginPw: accountPw });
+      const res = await signIn({ accountId, password: accountPw });
       console.log('signin res:', res);
-      const accessToken = res.accessToken ?? res.token;
-      if (!accessToken) {
-        throw new Error('No access token in response');
-      }
       // ✅ 토큰 저장
-      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('accessToken', res.accessToken);
+      let nextPath = '/planner';
+      try {
+        const me = await getMe();
+        if (typeof me.accountId === 'string') {
+          localStorage.setItem('accountId', me.accountId);
+        }
+        if (typeof me.plannerId === 'number') {
+          localStorage.setItem('plannerId', String(me.plannerId));
+        }
+        if (Array.isArray(me.roles)) {
+          const roles = me.roles.map((role) => String(role).toUpperCase());
+          if (roles[0]) {
+            localStorage.setItem('role', roles[0]);
+          }
+          if (roles.includes('MENTOR')) nextPath = '/mentor';
+          else if (roles.includes('MENTEE')) nextPath = '/planner';
+        }
+      } catch {
+        // ignore me fetch failures
+      }
       setAuthenticated(true);
 
       // 로그인 성공 후 이동
-      window.location.href = '/planner';
+      window.location.href = nextPath;
     } catch {
       setError('아이디 또는 비밀번호가 올바르지 않습니다.');
     }

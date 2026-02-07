@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useTodosQuery } from '@/src/hooks/todoQueries';
+import { useFeedbacksQuery } from '@/src/hooks/feedbackQueries';
 import { getTodoSnapshot as getMockTodoSnapshot } from '@/src/services/todo.mock';
 import FeedbackDetailHeader from './FeedbackDetailHeader';
 import FeedbackCommentThread from './FeedbackCommentThread';
@@ -26,6 +27,7 @@ function storageKey(todoId: string) {
 
 export default function FeedbackDetailView({ todoId, role }: Props) {
   const { data: todos = [] } = useTodosQuery();
+  const { data: feedbacks = [] } = useFeedbacksQuery();
   const todo = useMemo(() => {
     const sourceTodos = todos.length > 0 ? todos : getMockTodoSnapshot();
     return sourceTodos.find((item) => item.id === todoId);
@@ -64,10 +66,14 @@ export default function FeedbackDetailView({ todoId, role }: Props) {
     setComments((prev) => [next, ...prev]);
   };
 
+  const matchedFeedback = useMemo(() => {
+    return feedbacks.find((item) => String(item.todoItemId ?? '') === String(todoId));
+  }, [feedbacks, todoId]);
+
   const feedbackMessage =
-    todo?.feedback && todo.feedback.trim().length > 0
-      ? todo.feedback
-      : '아직 피드백이 등록되지 않았습니다.';
+    matchedFeedback?.content?.trim() ||
+    matchedFeedback?.summary?.trim() ||
+    (todo?.feedback && todo.feedback.trim().length > 0 ? todo.feedback : '');
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -78,7 +84,9 @@ export default function FeedbackDetailView({ todoId, role }: Props) {
 
       <section className="rounded-2xl bg-[#F5F5F5] p-5">
         <p className="text-lg font-semibold text-neutral-900">멘토 피드백</p>
-        <p className="mt-3 text-sm text-neutral-700">{feedbackMessage}</p>
+        <p className="mt-3 text-sm text-neutral-700">
+          {feedbackMessage || '아직 피드백이 등록되지 않았습니다.'}
+        </p>
       </section>
 
       <section className="space-y-3">
