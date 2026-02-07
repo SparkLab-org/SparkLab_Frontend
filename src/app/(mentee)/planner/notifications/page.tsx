@@ -59,7 +59,12 @@ export default function NotificationsPage() {
                 {content}
               </Link>
             ) : (
-              <div key={item.id}>{content}</div>
+              <div key={item.id}>
+                {content}
+                <p className="mt-2 text-[11px] text-neutral-400">
+                  이동할 수 있는 링크가 없습니다.
+                </p>
+              </div>
             );
           })}
         </div>

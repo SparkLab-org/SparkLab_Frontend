@@ -33,12 +33,16 @@ export default function FeedbackDetailView({ todoId, role }: Props) {
     return sourceTodos.find((item) => item.id === todoId);
   }, [todos, todoId]);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
   const pathname = usePathname();
   const resolvedRole: 'mentee' | 'mentor' =
     role ?? (pathname.startsWith('/mentor') ? 'mentor' : 'mentee');
 
   useEffect(() => {
     if (!matchedFeedback?.id) return;
+    setLoadingComments(true);
+    setCommentError(null);
     listFeedbackComments(matchedFeedback.id)
       .then((items) => {
         const mapped = items.map((item) => ({
@@ -48,10 +52,12 @@ export default function FeedbackDetailView({ todoId, role }: Props) {
           createdAt: item.createTime ? Date.parse(item.createTime) : Date.now(),
         }));
         setComments(mapped);
+        setLoadingComments(false);
       })
       .catch(() => {
-        // fallback to empty when API fails
+        setCommentError('댓글을 불러오지 못했습니다.');
         setComments([]);
+        setLoadingComments(false);
       });
   }, [matchedFeedback?.id]);
 
@@ -67,9 +73,10 @@ export default function FeedbackDetailView({ todoId, role }: Props) {
           createdAt: created.createTime ? Date.parse(created.createTime) : Date.now(),
         };
         setComments((prev) => [next, ...prev]);
+        setCommentError(null);
       })
       .catch(() => {
-        // ignore create failures
+        setCommentError('댓글 등록에 실패했습니다.');
       });
   };
 
@@ -98,7 +105,16 @@ export default function FeedbackDetailView({ todoId, role }: Props) {
 
       <section className="space-y-3">
         <p className="text-lg font-semibold text-neutral-900">질문/코멘트 스레드</p>
-        <FeedbackCommentThread comments={comments} />
+        {loadingComments ? (
+          <div className="rounded-2xl bg-[#F5F5F5] p-4 text-sm text-neutral-500">
+            댓글을 불러오는 중...
+          </div>
+        ) : (
+          <FeedbackCommentThread comments={comments} />
+        )}
+        {commentError && (
+          <p className="text-xs font-semibold text-rose-500">{commentError}</p>
+        )}
       </section>
 
       {resolvedRole === 'mentee' ? (

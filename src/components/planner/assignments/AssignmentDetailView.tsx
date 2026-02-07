@@ -19,6 +19,8 @@ export default function AssignmentDetailView({ todoId }: Props) {
   const { data: todos = [] } = useTodosQuery();
   const updateTodoMutation = useUpdateTodoMutation();
   const [submittedAt, setSubmittedAt] = useState<number | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const openPanel = useTimerStore((s) => s.openPanel);
   const setActiveTodoId = useTimerStore((s) => s.setActiveTodoId);
 
@@ -34,6 +36,8 @@ export default function AssignmentDetailView({ todoId }: Props) {
   const handleSubmit = (comment: string, files: File[]) => {
     if (!todo) return;
     const file = files[0];
+    setIsSubmitting(true);
+    setSubmitError(null);
     submitAssignment(Number(todo.id), file, comment)
       .then(() => {
         updateTodoMutation.mutate(
@@ -41,12 +45,18 @@ export default function AssignmentDetailView({ todoId }: Props) {
           {
             onSuccess: () => {
               setSubmittedAt(Date.now());
+              setIsSubmitting(false);
+            },
+            onError: () => {
+              setSubmitError('제출 상태 업데이트에 실패했습니다.');
+              setIsSubmitting(false);
             },
           }
         );
       })
       .catch(() => {
-        // ignore submit errors for now
+        setSubmitError('과제 제출에 실패했습니다.');
+        setIsSubmitting(false);
       });
   };
 
@@ -126,7 +136,7 @@ export default function AssignmentDetailView({ todoId }: Props) {
 
       <AssignmentSubmissionCard
         onSubmit={handleSubmit}
-        disabled={isDone}
+        disabled={isDone || isSubmitting}
       />
 
       <div className="rounded-2xl bg-[#F5F5F5] p-4 text-xs text-neutral-500">
@@ -134,8 +144,12 @@ export default function AssignmentDetailView({ todoId }: Props) {
           ? '마감 이후 제출은 지각 처리됩니다.'
           : '마감 전 제출하면 정상 처리됩니다.'}
         {submittedAt && (
-          <span className="ml-2 text-neutral-600">제출 완료</span>
+          <span className="ml-2 text-neutral-600">
+            제출 완료 · {formatTimestamp(submittedAt)}
+          </span>
         )}
+        {isSubmitting && <span className="ml-2 text-neutral-600">제출 중...</span>}
+        {submitError && <p className="mt-2 text-rose-500">{submitError}</p>}
       </div>
     </div>
   );
@@ -147,4 +161,14 @@ function formatHMS(totalSeconds: number) {
   const minutes = Math.floor((safe % 3600) / 60);
   const seconds = safe % 60;
   return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function formatTimestamp(ms: number) {
+  const date = new Date(ms);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${yyyy}.${mm}.${dd} ${hh}:${min}`;
 }

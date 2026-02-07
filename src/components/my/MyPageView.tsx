@@ -17,6 +17,7 @@ export default function MyPageView() {
   const { data: todos = [] } = useTodosQuery();
   const [activeTab, setActiveTab] = useState<MyAchievementTab>('routine');
   const [accountId, setAccountId] = useState('OOO');
+  const [activeLevel, setActiveLevel] = useState<'NORMAL' | 'WARNING' | 'DANGER'>('NORMAL');
 
   const { monthPercent, monthDoneCount, monthTotalCount } = useMemo(() => {
     const monthKey = format(new Date(), 'yyyy-MM');
@@ -50,12 +51,21 @@ export default function MyPageView() {
     if (stored && stored.trim().length > 0) {
       setAccountId(stored);
     }
+    const storedLevel = window.localStorage.getItem('menteeActiveLevel');
+    if (storedLevel === 'WARNING' || storedLevel === 'DANGER' || storedLevel === 'NORMAL') {
+      setActiveLevel(storedLevel);
+    }
   }, []);
 
   return (
     <div className="mx-auto max-w-md space-y-5 pb-16">
       <MyHeader />
-      <MyProfileCard name={accountId} roleLabel="멘티" totalStudySeconds={totalStudySeconds} />
+      <MyProfileCard
+        name={accountId}
+        roleLabel="멘티"
+        totalStudySeconds={totalStudySeconds}
+        activeLevel={activeLevel}
+      />
       <MyAchievementCard
         monthPercent={monthPercent}
         monthDoneCount={monthDoneCount}
