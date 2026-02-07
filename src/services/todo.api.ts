@@ -86,6 +86,7 @@ type UpdateTodoApiRequest = {
 
 const USE_MOCK = process.env.NEXT_PUBLIC_TODO_API_MODE !== 'backend';
 const TODO_BASE_PATH = '/todos';
+const TODO_FIXED_PATH = '/todos/fixed';
 const DEFAULT_PLANNER_ID = process.env.NEXT_PUBLIC_PLANNER_ID;
 
 const SUBJECT_FROM_API: Record<string, TodoSubject> = {
@@ -280,6 +281,62 @@ export async function deleteTodo(todoItemId: string): Promise<void> {
   if (USE_MOCK) return mockApi.deleteTodo(todoItemId);
 
   await apiFetch(`${TODO_BASE_PATH}/${todoItemId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function createFixedTodo(input: CreateTodoInput): Promise<Todo> {
+  if (USE_MOCK) return mockApi.createTodo(input);
+
+  const plannerId = resolvePlannerId();
+  if (!plannerId) throw new Error('plannerId is required');
+
+  const payload: CreateTodoApiRequest = {
+    plannerId,
+    title: input.title,
+    subject: toApiSubject(input.subject),
+    type: toApiType(input.type),
+  };
+
+  const created = await apiFetch<TodoApiItem>(TODO_FIXED_PATH, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  return mapTodoFromApi(created);
+}
+
+export async function updateFixedTodo(
+  todoItemId: string,
+  patch: UpdateTodoInput
+): Promise<Todo | null> {
+  if (USE_MOCK) return mockApi.updateTodo(todoItemId, patch);
+
+  const payload: UpdateTodoApiRequest = {};
+  if (patch.title) payload.title = patch.title;
+  if (patch.subject) payload.subject = toApiSubject(patch.subject);
+  if (patch.type) payload.type = toApiType(patch.type);
+  if (patch.status) payload.status = toApiStatus(patch.status);
+  if (typeof patch.studySeconds === 'number') {
+    payload.actualMinutes = Math.floor(patch.studySeconds / 60);
+  }
+
+  if (Object.keys(payload).length === 0) {
+    return null;
+  }
+
+  const updated = await apiFetch<TodoApiItem>(`${TODO_FIXED_PATH}/${todoItemId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+
+  return mapTodoFromApi(updated);
+}
+
+export async function deleteFixedTodo(todoItemId: string): Promise<void> {
+  if (USE_MOCK) return mockApi.deleteTodo(todoItemId);
+
+  await apiFetch(`${TODO_FIXED_PATH}/${todoItemId}`, {
     method: 'DELETE',
   });
 }

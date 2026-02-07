@@ -44,10 +44,14 @@ export default function LoginCard({ role, onRoleChange }: Props) {
     setError('');
 
     try {
-      const res = await signIn({ accountId, accountPw });
+      const res = await signIn({ loginId: accountId, loginPw: accountPw });
       console.log('signin res:', res);
+      const accessToken = res.accessToken ?? res.token;
+      if (!accessToken) {
+        throw new Error('No access token in response');
+      }
       // ✅ 토큰 저장
-      localStorage.setItem('accessToken', res.accessToken);
+      localStorage.setItem('accessToken', accessToken);
       setAuthenticated(true);
 
       // 로그인 성공 후 이동
