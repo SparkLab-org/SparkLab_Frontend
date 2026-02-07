@@ -90,6 +90,7 @@ export default function FeedbackContent({ title }: Props) {
         : undefined;
       return {
         id: feedback.id,
+        feedbackId: Number(feedback.id),
         todoItemId: feedback.todoItemId,
         title: todo?.title ?? feedback.summary ?? "피드백",
         subject: todo?.subject ?? "국어",

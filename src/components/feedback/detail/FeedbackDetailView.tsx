@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useTodosQuery } from '@/src/hooks/todoQueries';
 import { useFeedbacksQuery } from '@/src/hooks/feedbackQueries';
+import {
+  createFeedbackComment,
+  listFeedbackComments,
+} from '@/src/services/feedback.api';
 import { getTodoSnapshot as getMockTodoSnapshot } from '@/src/services/todo.mock';
 import FeedbackDetailHeader from './FeedbackDetailHeader';
 import FeedbackCommentThread from './FeedbackCommentThread';
@@ -21,10 +25,6 @@ type Props = {
   role?: 'mentee' | 'mentor';
 };
 
-function storageKey(todoId: string) {
-  return `feedback-comments:${todoId}`;
-}
-
 export default function FeedbackDetailView({ todoId, role }: Props) {
   const { data: todos = [] } = useTodosQuery();
   const { data: feedbacks = [] } = useFeedbacksQuery();
@@ -38,32 +38,39 @@ export default function FeedbackDetailView({ todoId, role }: Props) {
     role ?? (pathname.startsWith('/mentor') ? 'mentor' : 'mentee');
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const raw = localStorage.getItem(storageKey(todoId));
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw) as Comment[];
-      if (Array.isArray(parsed)) {
-        setComments(parsed);
-      }
-    } catch {
-      // ignore parse errors
-    }
-  }, [todoId]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(storageKey(todoId), JSON.stringify(comments));
-  }, [todoId, comments]);
+    if (!matchedFeedback?.id) return;
+    listFeedbackComments(matchedFeedback.id)
+      .then((items) => {
+        const mapped = items.map((item) => ({
+          id: String(item.feedbackCommentId),
+          role: item.type === 'MENTOR_REPLY' ? 'mentor' : 'mentee',
+          content: item.content,
+          createdAt: item.createTime ? Date.parse(item.createTime) : Date.now(),
+        }));
+        setComments(mapped);
+      })
+      .catch(() => {
+        // fallback to empty when API fails
+        setComments([]);
+      });
+  }, [matchedFeedback?.id]);
 
   const handleSubmit = (content: string, role: 'mentee' | 'mentor') => {
-    const next: Comment = {
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      role,
-      content,
-      createdAt: Date.now(),
-    };
-    setComments((prev) => [next, ...prev]);
+    if (!matchedFeedback?.id) return;
+    const type = role === 'mentor' ? 'MENTOR_REPLY' : 'MENTEE_QUESTION';
+    createFeedbackComment(matchedFeedback.id, { type, content })
+      .then((created) => {
+        const next: Comment = {
+          id: String(created.feedbackCommentId),
+          role,
+          content: created.content,
+          createdAt: created.createTime ? Date.parse(created.createTime) : Date.now(),
+        };
+        setComments((prev) => [next, ...prev]);
+      })
+      .catch(() => {
+        // ignore create failures
+      });
   };
 
   const matchedFeedback = useMemo(() => {

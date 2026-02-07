@@ -8,6 +8,7 @@ import { getTodoStatusLabel, isOverdueTask } from '@/src/lib/utils/todoStatus';
 import AssignmentSubmissionCard from './AssignmentSubmissionCard';
 import AssignmentAttachmentCard from '../list/listdetail/AssignmentAttachmentCard';
 import { useTimerStore } from '@/src/store/timerStore';
+import { submitAssignment } from '@/src/services/assignment.api';
 
 type Props = {
   todoId: string;
@@ -30,16 +31,23 @@ export default function AssignmentDetailView({ todoId }: Props) {
   const isLate = todo ? isOverdueTask(todo) : false;
   const isDone = todo?.status === 'DONE';
 
-  const handleSubmit = () => {
+  const handleSubmit = (comment: string, files: File[]) => {
     if (!todo) return;
-    updateTodoMutation.mutate(
-      { id: todo.id, patch: { status: 'DONE' } },
-      {
-        onSuccess: () => {
-          setSubmittedAt(Date.now());
-        },
-      }
-    );
+    const file = files[0];
+    submitAssignment(Number(todo.id), file, comment)
+      .then(() => {
+        updateTodoMutation.mutate(
+          { id: todo.id, patch: { status: 'DONE' } },
+          {
+            onSuccess: () => {
+              setSubmittedAt(Date.now());
+            },
+          }
+        );
+      })
+      .catch(() => {
+        // ignore submit errors for now
+      });
   };
 
   if (!todo) {

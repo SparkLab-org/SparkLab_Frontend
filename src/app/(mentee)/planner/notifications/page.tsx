@@ -37,13 +37,15 @@ export default function NotificationsPage() {
             const link =
               linkType === 'TODO' && typeof item.linkId === 'number'
                 ? `/planner/list/${item.linkId}`
-                : linkType === 'ASSIGNMENT' && typeof item.linkId === 'number'
+              : linkType === 'ASSIGNMENT' && typeof item.linkId === 'number'
                 ? `/planner/assignments/${item.linkId}`
-                : linkType === 'FEEDBACK' && typeof item.linkId === 'number'
+              : linkType === 'FEEDBACK' && typeof item.linkId === 'number'
                 ? `/feedback/${item.linkId}`
-                : linkType === 'QUESTION' && typeof item.linkId === 'number'
+              : linkType === 'QUESTION' && typeof item.linkId === 'number'
                 ? `/planner/question`
-                : null;
+              : linkType === 'MENTEE' && typeof item.linkId === 'number'
+                ? `/mentor/mentee/${item.linkId}`
+              : null;
 
             const content = (
               <div className="rounded-3xl bg-[#F5F5F5] p-4">

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { format, isSameDay, isSameMonth } from 'date-fns';
+import { useEffect, useState } from 'react';
 
 type View = 'week' | 'month';
 type TodoSummary = { id: string; title: string; status: string };
@@ -31,6 +32,14 @@ export default function PlannerDateGrid({
   progressByDate,
   itemsByDate,
 }: Props) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
   const days = view === 'week' ? weekDays : monthCells;
 
   return (

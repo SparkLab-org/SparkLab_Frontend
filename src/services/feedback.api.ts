@@ -101,3 +101,35 @@ export async function generateFeedbackDraft(
     body: JSON.stringify(input),
   });
 }
+
+type FeedbackCommentType = 'MENTEE_QUESTION' | 'MENTOR_REPLY';
+
+type FeedbackCommentCreateRequest = {
+  type: FeedbackCommentType;
+  content: string;
+};
+
+type FeedbackCommentResponse = {
+  feedbackCommentId: number;
+  feedbackId: number;
+  type: FeedbackCommentType;
+  content: string;
+  createTime?: string;
+  updateTime?: string;
+};
+
+export async function listFeedbackComments(
+  feedbackId: number | string
+): Promise<FeedbackCommentResponse[]> {
+  return apiFetch<FeedbackCommentResponse[]>(`${FEEDBACK_BASE_PATH}/${feedbackId}/comments`);
+}
+
+export async function createFeedbackComment(
+  feedbackId: number | string,
+  input: FeedbackCommentCreateRequest
+): Promise<FeedbackCommentResponse> {
+  return apiFetch<FeedbackCommentResponse>(`${FEEDBACK_BASE_PATH}/${feedbackId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}

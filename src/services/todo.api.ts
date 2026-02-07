@@ -61,6 +61,7 @@ type TodoApiItem = {
   feedback?: string | null;
   plannedMinutes?: number;
   actualMinutes?: number;
+  actualSeconds?: number;
   completedAt?: string | null;
   createTime?: string;
   updateTime?: string;
@@ -69,6 +70,7 @@ type TodoApiItem = {
 type CreateTodoApiRequest = {
   plannerId: number;
   title: string;
+  targetDate?: string;
   subject?: TodoApiSubject;
   type?: TodoApiType;
   plannedMinutes?: number;
@@ -76,11 +78,13 @@ type CreateTodoApiRequest = {
 
 type UpdateTodoApiRequest = {
   title?: string;
+  targetDate?: string;
   subject?: TodoApiSubject;
   type?: TodoApiType;
   status?: string;
   plannedMinutes?: number;
   actualMinutes?: number;
+  actualSeconds?: number;
   completedAt?: string | null;
 };
 
@@ -177,7 +181,9 @@ function mapTodoFromApi(item: TodoApiItem): Todo {
     status: toTodoStatus(item.status, item.completedAt ?? null),
     subject: toTodoSubject(item.subject),
     studySeconds:
-      typeof item.actualMinutes === 'number'
+      typeof item.actualSeconds === 'number'
+        ? Math.round(item.actualSeconds)
+        : typeof item.actualMinutes === 'number'
         ? Math.round(item.actualMinutes * 60)
         : Math.round((item.plannedMinutes ?? 0) * 60),
     createdAt: toEpochMillis(item.createTime ?? item.updateTime ?? item.completedAt ?? null),
@@ -245,6 +251,7 @@ export async function createTodo(input: CreateTodoInput): Promise<Todo> {
   const payload: CreateTodoApiRequest = {
     plannerId,
     title: input.title,
+    targetDate: input.dueDate,
     subject: toApiSubject(input.subject),
     type: toApiType(input.type),
   };
@@ -271,7 +278,9 @@ export async function updateTodo(
   if (typeof patch.studySeconds === 'number') {
     const minutes = Math.ceil(patch.studySeconds / 60);
     payload.actualMinutes = Math.max(1, minutes);
+    payload.actualSeconds = Math.max(1, Math.floor(patch.studySeconds));
   }
+  if (patch.dueDate) payload.targetDate = patch.dueDate;
 
   if (Object.keys(payload).length === 0) {
     return null;
@@ -328,7 +337,9 @@ export async function updateFixedTodo(
   if (typeof patch.studySeconds === 'number') {
     const minutes = Math.ceil(patch.studySeconds / 60);
     payload.actualMinutes = Math.max(1, minutes);
+    payload.actualSeconds = Math.max(1, Math.floor(patch.studySeconds));
   }
+  if (patch.dueDate) payload.targetDate = patch.dueDate;
 
   if (Object.keys(payload).length === 0) {
     return null;

@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 type FeedbackListItem = {
   id: string;
   todoItemId?: number;
+  feedbackId?: number;
   title: string;
   subject?: string;
   feedback?: string | null;
@@ -37,9 +38,8 @@ export default function FeedbackList({ items, isUnread, onMarkRead }: Props) {
             ? "완료"
             : "진행중"
           : null;
-        const detailHref = todo.todoItemId
-          ? `/feedback/${todo.todoItemId}`
-          : `/feedback/${todo.id}`;
+        const detailId = todo.todoItemId ?? todo.feedbackId ?? Number(todo.id);
+        const detailHref = `/feedback/${detailId}`;
         return (
           <Link
             key={todo.id}
