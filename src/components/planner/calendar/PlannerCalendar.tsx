@@ -21,7 +21,7 @@ import TodoCreateModal from "@/src/components/planner/todo/TodoCreateModal";
 import type { TodoSubject } from "@/src/lib/types/planner";
 import {
   useDeleteTodoMutation,
-  useTodosQuery,
+  useTodosRangeQuery,
   useUpdateTodoMutation,
 } from "@/src/hooks/todoQueries";
 
@@ -42,7 +42,6 @@ export default function PlannerCalendar({}: Props) {
   const selectedDateStr = usePlannerStore((s) => s.selectedDate);
   const selectedDate = useMemo(() => new Date(selectedDateStr), [selectedDateStr]);
   const setSelectedDate = usePlannerStore((s) => s.setSelectedDate);
-  const { data: todos = [] } = useTodosQuery();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const updateTodoMutation = useUpdateTodoMutation();
   const deleteTodoMutation = useDeleteTodoMutation();
@@ -83,6 +82,15 @@ export default function PlannerCalendar({}: Props) {
     [selectedDate],
   );
 
+  const viewDateKeys = useMemo(
+    () =>
+      (view === "week" ? weekDays : monthCells).map((day) =>
+        format(day, "yyyy-MM-dd")
+      ),
+    [view, weekDays, monthCells]
+  );
+  const { data: todos = [] } = useTodosRangeQuery(viewDateKeys);
+
   /** ✅ 헤더 텍스트 */
   const headerText = useMemo(() => {
     return format(selectedDate, "M월 d일(EEE)", { locale: ko });
@@ -115,11 +123,17 @@ export default function PlannerCalendar({}: Props) {
   }, [todos, selectedDateStr]);
 
   const itemsByDate = useMemo(() => {
-    return todos.reduce<Record<string, { id: string; title: string; status: string }[]>>(
+    return todos.reduce<Record<string, { id: string; title: string; status: string; isFixed: boolean; type: string }[]>>(
       (acc, todo) => {
         if (!todo.dueDate) return acc;
         const items = acc[todo.dueDate] ?? [];
-        items.push({ id: todo.id, title: todo.title, status: todo.status });
+        items.push({
+          id: todo.id,
+          title: todo.title,
+          status: todo.status,
+          isFixed: todo.isFixed,
+          type: todo.type,
+        });
         acc[todo.dueDate] = items;
         return acc;
       },
@@ -152,7 +166,7 @@ export default function PlannerCalendar({}: Props) {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold text-white"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#004DFF] text-xs font-semibold text-white"
                 aria-label="할 일 추가"
               >
                 +

@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronRight } from 'lucide-react';
+import { getProgressFillStyle } from '@/src/lib/utils/progressStyle';
 
 export type MyAchievementTab = 'routine' | 'today';
 
@@ -42,10 +43,10 @@ export default function MyAchievementCard({
         </div>
       </div>
 
-      <div className="mt-2 h-6 w-full overflow-hidden rounded-md bg-neutral-200">
+      <div className="mt-2 h-6 w-full overflow-hidden rounded-md bg-[#D5EBFF]">
         <div
-          className="h-full rounded-md bg-neutral-900"
-          style={{ width: `${Math.min(100, Math.max(0, monthPercent))}%` }}
+          className="h-full rounded-md"
+          style={getProgressFillStyle(monthPercent)}
           aria-label={`이번 달 성취도 ${monthPercent}%`}
         />
       </div>

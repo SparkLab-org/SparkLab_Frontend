@@ -27,7 +27,7 @@ export default function TodoList({
   showCreate = true,
 }: Props) {
   const selectedDate = usePlannerStore((s) => s.selectedDate);
-  const { data: todos = [] } = useTodosQuery();
+  const { data: todos = [] } = useTodosQuery({ planDate: selectedDate });
   const updateTodoMutation = useUpdateTodoMutation();
   const deleteTodoMutation = useDeleteTodoMutation();
 
@@ -104,7 +104,7 @@ export default function TodoList({
                   onClick={() => setActiveSubject(item)}
                   className={[
                     'rounded-full px-4 py-1.5 transition',
-                    active ? 'bg-black text-white' : 'hover:text-neutral-800',
+                    active ? 'bg-[#004DFF] text-white' : 'hover:text-neutral-800',
                   ].join(' ')}
                 >
                   {item}
@@ -140,7 +140,7 @@ export default function TodoList({
               className={[
                 'rounded-full px-3 py-1 transition',
                 active
-                  ? 'bg-black text-white'
+                  ? 'bg-[#004DFF] text-white'
                   : 'border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800',
               ].join(' ')}
             >

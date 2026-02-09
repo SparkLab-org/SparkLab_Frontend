@@ -1,5 +1,5 @@
-import FeedbackPlaceholder from '@/src/components/mentor/feedback/FeedbackPlaceholder';
+import MentorFeedbackView from '@/src/components/mentor/feedback/MentorFeedbackView';
 
 export default function MentorFeedbackPage() {
-  return <FeedbackPlaceholder />;
+  return <MentorFeedbackView />;
 }

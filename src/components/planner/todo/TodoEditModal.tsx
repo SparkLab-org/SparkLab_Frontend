@@ -98,7 +98,7 @@ export default function TodoEditModal({ todo, onClose }: Props) {
             </button>
             <button
               type="submit"
-              className="flex-1 rounded-xl bg-neutral-900 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5"
+              className="flex-1 rounded-xl bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5"
             >
               저장
             </button>

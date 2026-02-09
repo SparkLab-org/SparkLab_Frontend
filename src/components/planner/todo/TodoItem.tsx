@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import type { Todo, TodoSubject } from '@/src/lib/types/planner';
 import { getTodoStatusLabel, getTodoType, isOverdueTask } from '@/src/lib/utils/todoStatus';
+import { getTodoDetailHref } from '@/src/lib/utils/todoLink';
 
 type Props = {
   todo: Todo;
@@ -27,9 +28,7 @@ export default function TodoItem({
   const statusLabel = getTodoStatusLabel(todo);
   const overdueTask = isOverdueTask(todo);
   const lockUncheck = todo.isFixed;
-  const detailHref = todo.isFixed
-    ? `/planner/assignments/${todo.id}`
-    : `/planner/list/${todo.id}`;
+  const detailHref = getTodoDetailHref(todo);
   const [editing, setEditing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState(todo.title);
@@ -55,7 +54,7 @@ export default function TodoItem({
               className={[
                 'flex h-6 w-6 items-center justify-center rounded-lg border text-[10px] font-semibold',
                 isDone
-                  ? 'border-neutral-900 bg-neutral-900 text-white'
+                  ? 'border-[#004DFF] bg-[#004DFF] text-white'
                   : 'border-neutral-300 bg-white text-neutral-900',
                 lockUncheck ? 'cursor-not-allowed' : 'cursor-pointer',
               ].join(' ')}
@@ -175,7 +174,7 @@ export default function TodoItem({
               className={[
                 'flex h-7 w-7 items-center justify-center rounded-xl text-xs font-semibold transition ring-1',
                 isDone
-                  ? 'bg-neutral-900 text-white ring-neutral-900'
+                  ? 'bg-[#004DFF] text-white ring-[#004DFF]'
                   : 'bg-white text-neutral-500 ring-neutral-200 hover:ring-neutral-300',
                 lockUncheck ? 'cursor-not-allowed opacity-60' : '',
               ].join(' ')}
@@ -216,7 +215,7 @@ export default function TodoItem({
               </select>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="w-fit rounded-full bg-neutral-900 px-2 py-0.5 text-[11px] font-semibold text-white ring-1 ring-neutral-900">
+                <span className="w-fit rounded-full bg-[#004DFF] px-2 py-0.5 text-[11px] font-semibold text-white ring-1 ring-[#004DFF]">
                   {todo.subject}
                 </span>
                 <span
@@ -246,7 +245,7 @@ export default function TodoItem({
             <button
               type="button"
               onClick={save}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-900 text-white ring-1 ring-neutral-900 transition"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#004DFF] text-white ring-1 ring-[#004DFF] transition"
               aria-label="저장"
             >
               ✓

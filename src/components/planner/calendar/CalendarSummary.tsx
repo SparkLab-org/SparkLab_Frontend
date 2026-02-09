@@ -9,7 +9,7 @@ import { useTodosQuery } from '@/src/hooks/todoQueries';
 
 export default function CalendarSummary() {
   const selectedDate = usePlannerStore((s) => s.selectedDate);
-  const { data: todos = [] } = useTodosQuery();
+  const { data: todos = [] } = useTodosQuery({ planDate: selectedDate });
 
   const monthLabel = useMemo(
     () => format(new Date(selectedDate), 'yyyy년 M월', { locale: ko }),

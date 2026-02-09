@@ -21,3 +21,12 @@ export async function signIn(req: SignInReq): Promise<SignInRes> {
     body: JSON.stringify(req),
   });
 }
+
+/**
+ * POST /auth/signout
+ */
+export async function signOut(): Promise<void> {
+  await apiFetch('/auth/signout', {
+    method: 'POST',
+  });
+}

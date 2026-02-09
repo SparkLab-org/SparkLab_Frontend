@@ -7,16 +7,22 @@ type MenteeActiveLevelResponse = {
   activeLevel: MenteeActiveLevel;
 };
 
+type MenteeSummaryResponse = {
+  menteeId: number;
+  accountId: string;
+  activeLevel: MenteeActiveLevel;
+};
+
 export async function updateMenteeActiveLevel(
-  mentorId: number,
   menteeId: number,
   activeLevel: MenteeActiveLevel
 ): Promise<MenteeActiveLevelResponse> {
-  return apiFetch<MenteeActiveLevelResponse>(
-    `/mentors/${mentorId}/mentees/${menteeId}/active-level`,
-    {
-      method: 'PUT',
-      body: JSON.stringify({ activeLevel }),
-    }
-  );
+  return apiFetch<MenteeActiveLevelResponse>(`/mentees/${menteeId}/active-level`, {
+    method: 'PUT',
+    body: JSON.stringify({ activeLevel }),
+  });
+}
+
+export async function listMenteesByMentor(): Promise<MenteeSummaryResponse[]> {
+  return apiFetch<MenteeSummaryResponse[]>('/mentors/me/mentees');
 }

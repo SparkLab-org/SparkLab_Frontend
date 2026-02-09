@@ -1,4 +1,5 @@
 import { apiFetch } from '@/src/services/appClient';
+import { findOrCreateDailyPlan } from '@/src/services/dailyPlan.api';
 import type { Todo, TodoStatus, TodoSubject, TodoType } from '@/src/lib/types/planner';
 import * as mockApi from '@/src/services/todo.mock';
 
@@ -14,6 +15,7 @@ export type CreateTodoInput = {
   guideFileName?: string;
   guideFileUrl?: string;
   isFixed?: boolean;
+  plannedMinutes?: number;
 };
 
 export type UpdateTodoInput = Partial<
@@ -36,9 +38,19 @@ export type UpdateTodoInput = Partial<
   >
 >;
 
+type UpdateTodoExtras = {
+  plannedMinutes?: number;
+  actualMinutes?: number;
+  actualSeconds?: number;
+  completedAt?: string | null;
+};
+
+export type UpdateTodoInputWithExtras = UpdateTodoInput & UpdateTodoExtras;
+
 export type ListTodosParams = {
   plannerId?: number;
   planDate?: string; // YYYY-MM-DD
+  menteeId?: number;
 };
 
 type TodoApiSubject = 'KOREAN' | 'ENGLISH' | 'MATH' | 'ALL' | string;
@@ -92,6 +104,19 @@ const USE_MOCK = process.env.NEXT_PUBLIC_TODO_API_MODE !== 'backend';
 const TODO_BASE_PATH = '/todos';
 const TODO_FIXED_PATH = '/todos/fixed';
 const DEFAULT_PLANNER_ID = process.env.NEXT_PUBLIC_PLANNER_ID;
+const DAILY_PLAN_CACHE_KEY = 'dailyPlan';
+const DAILY_PLAN_CACHE = new Map<string, number>();
+const DAILY_PLAN_FAIL_CACHE_KEY = 'dailyPlanFail';
+const DAILY_PLAN_FAIL_CACHE = new Map<string, number>();
+const DAILY_PLAN_INFLIGHT = new Map<string, Promise<number | undefined>>();
+const DAILY_PLAN_FAIL_TTL_MS = 5 * 60 * 1000;
+const DAILY_PLAN_DISABLED_KEY = 'dailyPlanDisabledUntil';
+let DAILY_PLAN_DISABLED_UNTIL = 0;
+const TODO_META_STORAGE_KEY = 'todoMeta';
+const TODO_META_CACHE = new Map<
+  string,
+  { goal?: string | null; guideFileName?: string | null; assigneeId?: string | null; assigneeName?: string | null }
+>();
 
 const SUBJECT_FROM_API: Record<string, TodoSubject> = {
   KOREAN: '국어',
@@ -166,8 +191,13 @@ function toTimeHHmm(iso?: string | null, fallback = '23:59'): string {
   return `${hh}:${mm}`;
 }
 
+function isValidDateString(value?: string): value is string {
+  if (!value) return false;
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 function mapTodoFromApi(item: TodoApiItem): Todo {
-  return {
+  const base: Todo = {
     id: String(item.todoItemId),
     title: item.title ?? '',
     isFixed: item.isFixed ?? false,
@@ -190,6 +220,7 @@ function mapTodoFromApi(item: TodoApiItem): Todo {
     dueDate: item.targetDate ?? '',
     dueTime: toTimeHHmm(item.completedAt ?? item.updateTime ?? item.createTime ?? null),
   };
+  return applyTodoMeta(base);
 }
 
 function resolvePlannerId(): number | undefined {
@@ -197,21 +228,204 @@ function resolvePlannerId(): number | undefined {
     const stored = window.localStorage.getItem('plannerId');
     if (stored) {
       const parsed = Number(stored);
-      if (Number.isFinite(parsed)) return parsed;
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
     }
   }
   if (!DEFAULT_PLANNER_ID) return undefined;
   const parsed = Number(DEFAULT_PLANNER_ID);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function getDailyPlanCacheKey(planDate: string) {
+  return planDate;
+}
+
+function readDailyPlanCache(key: string): number | undefined {
+  const cached = DAILY_PLAN_CACHE.get(key);
+  if (cached) return cached;
+  if (typeof window === 'undefined') return undefined;
+  const stored = window.localStorage.getItem(`${DAILY_PLAN_CACHE_KEY}:${key}`);
+  if (!stored) return undefined;
+  const parsed = Number(stored);
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+  DAILY_PLAN_CACHE.set(key, parsed);
+  return parsed;
+}
+
+function writeDailyPlanCache(key: string, dailyPlanId: number) {
+  if (!Number.isFinite(dailyPlanId) || dailyPlanId <= 0) return;
+  DAILY_PLAN_CACHE.set(key, dailyPlanId);
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(`${DAILY_PLAN_CACHE_KEY}:${key}`, String(dailyPlanId));
+  }
+}
+
+function readDailyPlanFail(key: string): number | undefined {
+  const cached = DAILY_PLAN_FAIL_CACHE.get(key);
+  if (cached) return cached;
+  if (typeof window === 'undefined') return undefined;
+  const stored = window.localStorage.getItem(`${DAILY_PLAN_FAIL_CACHE_KEY}:${key}`);
+  if (!stored) return undefined;
+  const parsed = Number(stored);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function writeDailyPlanFail(key: string) {
+  const now = Date.now();
+  DAILY_PLAN_FAIL_CACHE.set(key, now);
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(`${DAILY_PLAN_FAIL_CACHE_KEY}:${key}`, String(now));
+  }
+}
+
+function readTodoMeta(id: string) {
+  const cached = TODO_META_CACHE.get(id);
+  if (cached) return cached;
+  if (typeof window === 'undefined') return undefined;
+  const stored = window.localStorage.getItem(`${TODO_META_STORAGE_KEY}:${id}`);
+  if (!stored) return undefined;
+  try {
+    const parsed = JSON.parse(stored) as {
+      goal?: string | null;
+      guideFileName?: string | null;
+      assigneeId?: string | null;
+      assigneeName?: string | null;
+    };
+    if (parsed && typeof parsed === 'object') {
+      TODO_META_CACHE.set(id, parsed);
+      return parsed;
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return undefined;
+}
+
+function writeTodoMeta(
+  id: string,
+  meta:
+    | { goal?: string | null; guideFileName?: string | null; assigneeId?: string | null; assigneeName?: string | null }
+    | null
+) {
+  if (!meta || (!meta.goal && !meta.guideFileName && !meta.assigneeId && !meta.assigneeName)) {
+    TODO_META_CACHE.delete(id);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(`${TODO_META_STORAGE_KEY}:${id}`);
+    }
+    return;
+  }
+  TODO_META_CACHE.set(id, meta);
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(`${TODO_META_STORAGE_KEY}:${id}`, JSON.stringify(meta));
+  }
+}
+
+function applyTodoMeta(todo: Todo): Todo {
+  const meta = readTodoMeta(todo.id);
+  if (!meta) return todo;
+  return {
+    ...todo,
+    goal: todo.goal ?? meta.goal ?? null,
+    guideFileName: todo.guideFileName ?? meta.guideFileName ?? null,
+    assigneeId: todo.assigneeId ?? meta.assigneeId ?? null,
+    assigneeName: todo.assigneeName ?? meta.assigneeName ?? null,
+  };
+}
+
+function updateTodoMetaFromPatch(
+  id: string,
+  patch: {
+    goal?: string | null;
+    guideFileName?: string | null;
+    assigneeId?: string | null;
+    assigneeName?: string | null;
+  }
+) {
+  if (
+    patch.goal === undefined &&
+    patch.guideFileName === undefined &&
+    patch.assigneeId === undefined &&
+    patch.assigneeName === undefined
+  )
+    return;
+  const current = readTodoMeta(id) ?? {};
+  const next = {
+    ...current,
+    ...(patch.goal !== undefined ? { goal: patch.goal } : {}),
+    ...(patch.guideFileName !== undefined ? { guideFileName: patch.guideFileName } : {}),
+    ...(patch.assigneeId !== undefined ? { assigneeId: patch.assigneeId } : {}),
+    ...(patch.assigneeName !== undefined ? { assigneeName: patch.assigneeName } : {}),
+  };
+  writeTodoMeta(id, next);
+}
+
+function readDailyPlanDisabledUntil(): number {
+  if (DAILY_PLAN_DISABLED_UNTIL > 0) return DAILY_PLAN_DISABLED_UNTIL;
+  if (typeof window === 'undefined') return 0;
+  const stored = window.localStorage.getItem(DAILY_PLAN_DISABLED_KEY);
+  const parsed = stored ? Number(stored) : NaN;
+  if (Number.isFinite(parsed)) {
+    DAILY_PLAN_DISABLED_UNTIL = parsed;
+    return parsed;
+  }
+  return 0;
+}
+
+function disableDailyPlanForTTL() {
+  const until = Date.now() + DAILY_PLAN_FAIL_TTL_MS;
+  DAILY_PLAN_DISABLED_UNTIL = until;
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(DAILY_PLAN_DISABLED_KEY, String(until));
+  }
+}
+
+async function resolveDailyPlanId(planDate?: string) {
+  if (!planDate) return undefined;
+  if (!isValidDateString(planDate)) return undefined;
+  const key = getDailyPlanCacheKey(planDate);
+  const cached = readDailyPlanCache(key);
+  if (cached) return cached;
+  const disabledUntil = readDailyPlanDisabledUntil();
+  if (disabledUntil && Date.now() < disabledUntil) {
+    return undefined;
+  }
+  if (typeof window !== 'undefined') {
+    const token = window.localStorage.getItem('accessToken');
+    if (!token) return undefined;
+  }
+  const lastFail = readDailyPlanFail(key);
+  if (lastFail && Date.now() - lastFail < DAILY_PLAN_FAIL_TTL_MS) {
+    return undefined;
+  }
+  const inflight = DAILY_PLAN_INFLIGHT.get(key);
+  if (inflight) return inflight;
+
+  const request = (async () => {
+    try {
+      const res = await findOrCreateDailyPlan({ planDate });
+      if (res.dailyPlanId && res.dailyPlanId > 0) {
+        writeDailyPlanCache(key, res.dailyPlanId);
+        return res.dailyPlanId;
+      }
+    } catch {
+      writeDailyPlanFail(key);
+      disableDailyPlanForTTL();
+    } finally {
+      DAILY_PLAN_INFLIGHT.delete(key);
+    }
+    return undefined;
+  })();
+
+  DAILY_PLAN_INFLIGHT.set(key, request);
+  return request;
 }
 
 function buildListQuery(params: ListTodosParams): string {
   const search = new URLSearchParams();
-  if (typeof params.plannerId === 'number') {
-    search.set('plannerId', String(params.plannerId));
-  }
   if (params.planDate) {
     search.set('planDate', params.planDate);
+  } else if (typeof params.plannerId === 'number' && params.plannerId > 0) {
+    search.set('plannerId', String(params.plannerId));
   }
   const query = search.toString();
   return query ? `?${query}` : '';
@@ -224,7 +438,8 @@ export function getTodoSnapshot(): Todo[] {
 export async function listTodos(params: ListTodosParams = {}): Promise<Todo[]> {
   if (USE_MOCK) return mockApi.listTodos();
 
-  const plannerId = params.plannerId ?? resolvePlannerId();
+  const dailyPlanId = await resolveDailyPlanId(params.planDate);
+  const plannerId = params.plannerId ?? dailyPlanId ?? resolvePlannerId();
   const query = buildListQuery({ plannerId, planDate: params.planDate });
   const items = await apiFetch<TodoApiItem[]>(`${TODO_BASE_PATH}${query}`);
   return items.map(mapTodoFromApi);
@@ -245,28 +460,47 @@ export async function getTodo(todoItemId: string | number): Promise<Todo> {
 export async function createTodo(input: CreateTodoInput): Promise<Todo> {
   if (USE_MOCK) return mockApi.createTodo(input);
 
-  const plannerId = resolvePlannerId();
-  if (plannerId === undefined) throw new Error('plannerId is required');
+  const dailyPlanId = await resolveDailyPlanId(input.dueDate);
+  const plannerId = dailyPlanId ?? resolvePlannerId();
+  if (!plannerId || plannerId <= 0) throw new Error('plannerId is required');
 
   const payload: CreateTodoApiRequest = {
     plannerId,
     title: input.title,
-    targetDate: input.dueDate,
-    subject: toApiSubject(input.subject),
-    type: toApiType(input.type),
   };
+  if (isValidDateString(input.dueDate)) {
+    payload.targetDate = input.dueDate;
+  }
+  if (input.subject) {
+    payload.subject = toApiSubject(input.subject);
+  }
+  if (input.type) {
+    payload.type = toApiType(input.type);
+  }
+  if (typeof input.plannedMinutes === 'number') {
+    payload.plannedMinutes = input.plannedMinutes;
+  }
 
   const created = await apiFetch<TodoApiItem>(TODO_BASE_PATH, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 
-  return mapTodoFromApi(created);
+  const mapped = mapTodoFromApi(created);
+  if (input.goal || input.guideFileName || input.assigneeId || input.assigneeName) {
+    writeTodoMeta(mapped.id, {
+      goal: input.goal ?? null,
+      guideFileName: input.guideFileName ?? null,
+      assigneeId: input.assigneeId ?? null,
+      assigneeName: input.assigneeName ?? null,
+    });
+  }
+  return applyTodoMeta(mapped);
 }
 
 export async function updateTodo(
   todoItemId: string,
-  patch: UpdateTodoInput
+  patch: UpdateTodoInputWithExtras
 ): Promise<Todo | null> {
   if (USE_MOCK) return mockApi.updateTodo(todoItemId, patch);
 
@@ -275,6 +509,18 @@ export async function updateTodo(
   if (patch.subject) payload.subject = toApiSubject(patch.subject);
   if (patch.type) payload.type = toApiType(patch.type);
   if (patch.status) payload.status = toApiStatus(patch.status);
+  if (typeof patch.plannedMinutes === 'number') {
+    payload.plannedMinutes = Math.max(0, Math.floor(patch.plannedMinutes));
+  }
+  if (typeof patch.actualMinutes === 'number') {
+    payload.actualMinutes = Math.max(0, Math.floor(patch.actualMinutes));
+  }
+  if (typeof patch.actualSeconds === 'number') {
+    payload.actualSeconds = Math.max(0, Math.floor(patch.actualSeconds));
+  }
+  if (patch.completedAt !== undefined) {
+    payload.completedAt = patch.completedAt;
+  }
   if (typeof patch.studySeconds === 'number') {
     const minutes = Math.ceil(patch.studySeconds / 60);
     payload.actualMinutes = Math.max(1, minutes);
@@ -291,7 +537,14 @@ export async function updateTodo(
     body: JSON.stringify(payload),
   });
 
-  return mapTodoFromApi(updated);
+  const mapped = mapTodoFromApi(updated);
+  updateTodoMetaFromPatch(mapped.id, {
+    goal: patch.goal,
+    guideFileName: patch.guideFileName,
+    assigneeId: patch.assigneeId,
+    assigneeName: patch.assigneeName,
+  });
+  return applyTodoMeta(mapped);
 }
 
 export async function deleteTodo(todoItemId: string): Promise<void> {
@@ -305,27 +558,45 @@ export async function deleteTodo(todoItemId: string): Promise<void> {
 export async function createFixedTodo(input: CreateTodoInput): Promise<Todo> {
   if (USE_MOCK) return mockApi.createTodo(input);
 
-  const plannerId = resolvePlannerId();
-  if (!plannerId) throw new Error('plannerId is required');
+  const dailyPlanId = await resolveDailyPlanId(input.dueDate);
+  const plannerId = dailyPlanId ?? resolvePlannerId();
+  if (!plannerId || plannerId <= 0) throw new Error('plannerId is required');
 
   const payload: CreateTodoApiRequest = {
     plannerId,
     title: input.title,
-    subject: toApiSubject(input.subject),
-    type: toApiType(input.type),
   };
+  if (isValidDateString(input.dueDate)) payload.targetDate = input.dueDate;
+  if (input.subject) {
+    payload.subject = toApiSubject(input.subject);
+  }
+  if (input.type) {
+    payload.type = toApiType(input.type);
+  }
+  if (typeof input.plannedMinutes === 'number') {
+    payload.plannedMinutes = input.plannedMinutes;
+  }
 
   const created = await apiFetch<TodoApiItem>(TODO_FIXED_PATH, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 
-  return mapTodoFromApi(created);
+  const mapped = mapTodoFromApi(created);
+  if (input.goal || input.guideFileName || input.assigneeId || input.assigneeName) {
+    writeTodoMeta(mapped.id, {
+      goal: input.goal ?? null,
+      guideFileName: input.guideFileName ?? null,
+      assigneeId: input.assigneeId ?? null,
+      assigneeName: input.assigneeName ?? null,
+    });
+  }
+  return applyTodoMeta(mapped);
 }
 
 export async function updateFixedTodo(
   todoItemId: string,
-  patch: UpdateTodoInput
+  patch: UpdateTodoInputWithExtras
 ): Promise<Todo | null> {
   if (USE_MOCK) return mockApi.updateTodo(todoItemId, patch);
 
@@ -334,6 +605,18 @@ export async function updateFixedTodo(
   if (patch.subject) payload.subject = toApiSubject(patch.subject);
   if (patch.type) payload.type = toApiType(patch.type);
   if (patch.status) payload.status = toApiStatus(patch.status);
+  if (typeof patch.plannedMinutes === 'number') {
+    payload.plannedMinutes = Math.max(0, Math.floor(patch.plannedMinutes));
+  }
+  if (typeof patch.actualMinutes === 'number') {
+    payload.actualMinutes = Math.max(0, Math.floor(patch.actualMinutes));
+  }
+  if (typeof patch.actualSeconds === 'number') {
+    payload.actualSeconds = Math.max(0, Math.floor(patch.actualSeconds));
+  }
+  if (patch.completedAt !== undefined) {
+    payload.completedAt = patch.completedAt;
+  }
   if (typeof patch.studySeconds === 'number') {
     const minutes = Math.ceil(patch.studySeconds / 60);
     payload.actualMinutes = Math.max(1, minutes);
@@ -350,7 +633,14 @@ export async function updateFixedTodo(
     body: JSON.stringify(payload),
   });
 
-  return mapTodoFromApi(updated);
+  const mapped = mapTodoFromApi(updated);
+  updateTodoMetaFromPatch(mapped.id, {
+    goal: patch.goal,
+    guideFileName: patch.guideFileName,
+    assigneeId: patch.assigneeId,
+    assigneeName: patch.assigneeName,
+  });
+  return applyTodoMeta(mapped);
 }
 
 export async function deleteFixedTodo(todoItemId: string): Promise<void> {

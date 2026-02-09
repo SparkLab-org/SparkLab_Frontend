@@ -2,6 +2,7 @@
 
 import { useMemo, useSyncExternalStore } from 'react';
 import { Bell, User } from 'lucide-react';
+import seolStudyIcon from '@/src/assets/icons/seolStudy.svg';
 
 const ACCOUNT_ID_FALLBACK = 'OOO';
 
@@ -36,12 +37,18 @@ export default function MentorTopBar() {
     });
     return formatter.format(new Date());
   }, []);
+  const brandIconSrc = typeof seolStudyIcon === 'string' ? seolStudyIcon : seolStudyIcon?.src;
 
   return (
     <header className="border-b border-[#F5F5F5] bg-white">
       <div className="flex w-full flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-6">
         <div className="flex items-center justify-between sm:justify-start sm:gap-6">
-          <div className="text-lg font-semibold text-neutral-900 sm:text-xl">설스터디</div>
+          <div className="flex items-center gap-2">
+            {brandIconSrc ? (
+              <img src={brandIconSrc} alt="설스터디" className="h-7 w-7" />
+            ) : null}
+            <div className="text-lg font-semibold text-neutral-900 sm:text-xl">설스터디</div>
+          </div>
           <div className="text-sm font-semibold text-neutral-900 sm:text-[16px]">
             {dateLabel}
           </div>

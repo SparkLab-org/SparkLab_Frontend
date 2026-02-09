@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { useTodosQuery } from '@/src/hooks/todoQueries';
-import { getTodoSnapshot as getMockTodoSnapshot } from '@/src/services/todo.mock';
 import { usePlannerStore } from '@/src/store/plannerStore';
 import type { TodoSubject } from '@/src/lib/types/planner';
 import AssignmentItem from './AssignmentItem';
@@ -16,14 +15,13 @@ type Props = {
 
 export default function AssignmentList({ hideFilters = false, hideTitle = false }: Props) {
   const selectedDate = usePlannerStore((s) => s.selectedDate);
-  const { data: todos = [] } = useTodosQuery();
+  const { data: todos = [] } = useTodosQuery({ planDate: selectedDate });
   const [activeSubject, setActiveSubject] = useState<SubjectFilter>('전체');
 
   const subjects: SubjectFilter[] = ['전체', '국어', '수학', '영어'];
 
   const assignments = useMemo(() => {
-    const sourceTodos = todos.length > 0 ? todos : getMockTodoSnapshot();
-    return sourceTodos.filter((todo) => todo.isFixed && todo.dueDate === selectedDate);
+    return todos.filter((todo) => todo.isFixed && todo.dueDate === selectedDate);
   }, [todos, selectedDate]);
 
   const filtered = useMemo(() => {
@@ -52,7 +50,7 @@ export default function AssignmentList({ hideFilters = false, hideTitle = false 
                     onClick={() => setActiveSubject(item)}
                     className={[
                       'rounded-full px-4 py-1.5 transition',
-                      active ? 'bg-black text-white' : 'hover:text-neutral-800',
+                      active ? 'bg-[#004DFF] text-white' : 'hover:text-neutral-800',
                     ].join(' ')}
                   >
                     {item}

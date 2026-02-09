@@ -7,6 +7,7 @@ import {
   WEEK_LABELS,
   type DaySchedule,
 } from '@/src/components/mentor/planner/mentorPlannerUtils';
+import { getProgressFillStyle } from '@/src/lib/utils/progressStyle';
 
 type Props = {
   headerLabel: string;
@@ -75,12 +76,13 @@ export default function MentorPlannerCalendarSection({
           const daySchedule = scheduleByDate[key];
           const dayItems = daySchedule?.items ?? [];
           const progress = daySchedule?.progress ?? 0;
+          const progressPercent = Math.round(progress * 100);
           const inMonth = isSameMonth(date, activeMonth);
           const selected = isSameDay(date, selectedDate);
           const dayLabelClass = [
             'flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold',
             selected
-              ? 'bg-neutral-900 text-white'
+              ? 'bg-[#004DFF] text-white'
               : inMonth
                 ? 'text-neutral-900'
                 : 'text-neutral-300',
@@ -99,10 +101,10 @@ export default function MentorPlannerCalendarSection({
                 <span className={`${dayLabelClass} ml-0.5`}>{format(date, 'd')}</span>
                 {dayItems.length > 0 && (
                   <div className="mt-1.5 w-full px-0.5">
-                    <div className="h-1.5 w-full rounded-full bg-neutral-200">
+                    <div className="h-1.5 w-full rounded-full bg-[#D5EBFF]">
                       <div
-                        className="h-full rounded-full bg-neutral-900"
-                        style={{ width: `${Math.round(progress * 100)}%` }}
+                        className="h-full rounded-full"
+                        style={getProgressFillStyle(progressPercent)}
                       />
                     </div>
                   </div>

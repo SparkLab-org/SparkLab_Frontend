@@ -4,6 +4,7 @@ import GreetingCard from "@/src/components/planner/landing/greetingCard";
 import WeeklyCalendar from "@/src/components/planner/landing/WeeklyCalendar";
 import TodayTodoSummary from "@/src/components/planner/landing/TodayTodoSummary";
 import YesterdayFeedbackSummary from "@/src/components/planner/landing/YesterdayFeedbackSummary";
+import DailyPlanCommentCard from "@/src/components/planner/landing/DailyPlanCommentCard";
 
 export default function PlannerPage() {
   return (

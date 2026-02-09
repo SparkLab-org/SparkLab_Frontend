@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useState } from 'react';
 import { signIn } from '@/src/services/auth.api';
 import { getMe } from '@/src/services/auth.me.api';
+import { findOrCreateDailyPlan } from '@/src/services/dailyPlan.api';
 import { useAuthStore } from '@/src/store/authStore';
 
 
@@ -55,8 +56,68 @@ export default function LoginCard({ role, onRoleChange }: Props) {
         if (typeof me.accountId === 'string') {
           localStorage.setItem('accountId', me.accountId);
         }
-        if (typeof me.plannerId === 'number') {
-          localStorage.setItem('plannerId', String(me.plannerId));
+        if (me.menteeId !== undefined && me.menteeId !== null) {
+          const parsed =
+            typeof me.menteeId === 'number'
+              ? me.menteeId
+              : Number(me.menteeId);
+          if (Number.isFinite(parsed)) {
+            localStorage.setItem('menteeId', String(parsed));
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const planDate = `${yyyy}-${mm}-${dd}`;
+            try {
+              const res = await findOrCreateDailyPlan({ planDate });
+              if (res.dailyPlanId && res.dailyPlanId > 0) {
+                localStorage.setItem('plannerId', String(res.dailyPlanId));
+              }
+            } catch {
+              // ignore dailyPlan failures
+            }
+          }
+        } else {
+          const rawAccountId = typeof me.accountId === 'string' ? me.accountId : '';
+          const numericMatch = rawAccountId.match(/\d+/);
+          const fallbackAccountId = numericMatch ? Number(numericMatch[0]) : undefined;
+          if (fallbackAccountId && Number.isFinite(fallbackAccountId)) {
+            localStorage.setItem('menteeId', String(fallbackAccountId));
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const planDate = `${yyyy}-${mm}-${dd}`;
+            try {
+              const res = await findOrCreateDailyPlan({ planDate });
+              if (res.dailyPlanId && res.dailyPlanId > 0) {
+                localStorage.setItem('plannerId', String(res.dailyPlanId));
+              }
+            } catch {
+              // ignore dailyPlan failures
+            }
+          }
+        }
+        if (me.mentorId !== undefined && me.mentorId !== null) {
+          const parsed =
+            typeof me.mentorId === 'number'
+              ? me.mentorId
+              : Number(me.mentorId);
+          if (Number.isFinite(parsed)) {
+            localStorage.setItem('mentorId', String(parsed));
+          }
+        }
+        if (me.plannerId !== undefined && me.plannerId !== null) {
+          const parsed =
+            typeof me.plannerId === 'number'
+              ? me.plannerId
+              : Number(me.plannerId);
+          if (Number.isFinite(parsed)) {
+            localStorage.setItem('plannerId', String(parsed));
+          }
+        } else {
+          // 임시 값: 백엔드에 실제 plannerId가 없을 때 0으로 저장
+          localStorage.setItem('plannerId', '0');
         }
         if (Array.isArray(me.roles)) {
           const roles = me.roles.map((role) => String(role).toUpperCase());
@@ -129,7 +190,7 @@ export default function LoginCard({ role, onRoleChange }: Props) {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-neutral-900 px-3 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
+            className="w-full rounded-xl bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] px-3 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
           >
             {cta}
           </button>

@@ -54,7 +54,7 @@ export default function TaskProgressCard({
               setActiveTodoId(todoId);
               openPanel();
             }}
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-xs font-semibold text-white"
+            className="rounded-lg bg-[#004DFF] px-4 py-2 text-xs font-semibold text-white"
           >
             타이머
           </button>

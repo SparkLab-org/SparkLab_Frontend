@@ -6,7 +6,7 @@ import { addDays, format, startOfWeek } from "date-fns";
 
 import PlannerDateGrid from "../calendar/PlannerDateGrid";
 import { usePlannerStore } from "@/src/store/plannerStore";
-import { useTodosQuery } from "@/src/hooks/todoQueries";
+import { useTodosRangeQuery } from "@/src/hooks/todoQueries";
 
 type Props = Record<string, never>;
 
@@ -14,7 +14,6 @@ export default function WeeklyCalendar({}: Props) {
   const selectedDateStr = usePlannerStore((s) => s.selectedDate);
   const selectedDate = useMemo(() => new Date(selectedDateStr), [selectedDateStr]);
   const setSelectedDate = usePlannerStore((s) => s.setSelectedDate);
-  const { data: todos = [] } = useTodosQuery();
 
   const weekStart = useMemo(
     () => startOfWeek(selectedDate, { weekStartsOn: 0 }),
@@ -29,6 +28,12 @@ export default function WeeklyCalendar({}: Props) {
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   }, [weekStart]);
+
+  const weekDateKeys = useMemo(
+    () => weekDays.map((day) => format(day, "yyyy-MM-dd")),
+    [weekDays]
+  );
+  const { data: todos = [] } = useTodosRangeQuery(weekDateKeys);
 
   const progressByDate: Record<string, number> = useMemo(() => {
     const counts = todos.reduce<Record<string, { total: number; done: number }>>((acc, todo) => {

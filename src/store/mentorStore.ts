@@ -7,6 +7,7 @@ type MentorState = {
   selectedId: string;
   setSelectedId: (id: string) => void;
   updateFeedback: (id: string, text: string) => void;
+  updateMenteeLevel: (id: string, level: Mentee['activeLevel']) => void;
   setMentees: (list: Mentee[]) => void;
 };
 
@@ -70,6 +71,13 @@ export const useMentorStore = create<MentorState>()(
       updateFeedback: (id, text) =>
         set({
           mentees: get().mentees.map((m) => (m.id === id ? { ...m, feedback: text } : m)),
+        }),
+
+      updateMenteeLevel: (id, level) =>
+        set({
+          mentees: get().mentees.map((m) =>
+            m.id === id ? { ...m, activeLevel: level } : m
+          ),
         }),
 
       setMentees: (list) =>

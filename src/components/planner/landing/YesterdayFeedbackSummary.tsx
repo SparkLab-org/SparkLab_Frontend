@@ -6,12 +6,11 @@ import { format, subDays } from 'date-fns';
 import { useTodosQuery } from '@/src/hooks/todoQueries';
 
 export default function YesterdayFeedbackSummary() {
-  const { data: todos = [] } = useTodosQuery();
-
   const yesterdayKey = useMemo(
     () => format(subDays(new Date(), 1), 'yyyy-MM-dd'),
     []
   );
+  const { data: todos = [] } = useTodosQuery({ planDate: yesterdayKey });
 
   const yesterdayFeedbackTodos = useMemo(() => {
     return todos

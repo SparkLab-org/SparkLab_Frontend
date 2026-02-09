@@ -51,7 +51,7 @@ export default function AssignmentAttachmentCard({
               <button
                 type="button"
                 onClick={handlePickFiles}
-                className="shrink-0 rounded-lg bg-neutral-900 px-3 py-2 text-xs font-semibold text-white"
+                className="shrink-0 rounded-lg bg-[#004DFF] px-3 py-2 text-xs font-semibold text-white"
               >
                 첨부하기
               </button>

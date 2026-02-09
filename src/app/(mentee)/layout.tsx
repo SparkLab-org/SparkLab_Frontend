@@ -76,7 +76,7 @@ function Nav() {
                     <span
                       className={[
                         'h-8 w-8 rounded-[30px]',
-                        active ? 'bg-neutral-900' : 'bg-neutral-300',
+                        active ? 'bg-[#004DFF]' : 'bg-neutral-300',
                       ].join(' ')}
                     />
                   )}

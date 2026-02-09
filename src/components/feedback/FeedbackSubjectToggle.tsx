@@ -25,7 +25,7 @@ export default function FeedbackSubjectToggle({ activeSubject, onChange }: Props
                 onClick={() => onChange(item)}
                 className={[
                   "rounded-full px-4 py-1.5 transition",
-                  active ? "bg-black text-white" : "hover:text-neutral-800",
+                  active ? "bg-[#004DFF] text-white" : "hover:text-neutral-800",
                 ].join(" ")}
               >
                 {item}

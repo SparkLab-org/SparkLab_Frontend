@@ -3,9 +3,17 @@
 import Link from 'next/link';
 import { format, isSameDay, isSameMonth } from 'date-fns';
 import { useEffect, useState } from 'react';
+import { getProgressFillStyle } from '@/src/lib/utils/progressStyle';
+import { getTodoDetailHref } from '@/src/lib/utils/todoLink';
 
 type View = 'week' | 'month';
-type TodoSummary = { id: string; title: string; status: string };
+type TodoSummary = {
+  id: string;
+  title: string;
+  status: string;
+  isFixed?: boolean;
+  type?: string;
+};
 
 type Props = {
   view: View;
@@ -51,7 +59,7 @@ export default function PlannerDateGrid({
         const progress = progressByDate?.[key];
         const hasProgress =
           !!progressByDate && Object.prototype.hasOwnProperty.call(progressByDate, key);
-        const isComplete = typeof progress === 'number' && progress >= 1;
+        const progressPercent = typeof progress === 'number' ? Math.round(progress * 100) : 0;
         const items = view === 'month' ? itemsByDate?.[key] ?? [] : [];
 
         const containerClassName = [
@@ -63,7 +71,7 @@ export default function PlannerDateGrid({
               ? 'text-neutral-900'
               : 'text-neutral-300'
             : isSelected
-            ? 'bg-black text-white'
+            ? 'bg-[#004DFF] text-white'
             : inMonth
             ? 'bg-neutral-100 text-neutral-800'
             : 'bg-neutral-50 text-neutral-300',
@@ -76,7 +84,7 @@ export default function PlannerDateGrid({
                 className={[
                   'flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold',
                   isSelected
-                    ? 'bg-black text-white'
+                    ? 'bg-[#004DFF] text-white'
                     : inMonth
                     ? 'bg-neutral-100 text-neutral-800'
                     : 'bg-neutral-50 text-neutral-300',
@@ -93,7 +101,11 @@ export default function PlannerDateGrid({
                 {items.slice(0, 2).map((item) => (
                   <Link
                     key={`${key}-${item.id}`}
-                    href={`/planner/list/${item.id}`}
+                    href={getTodoDetailHref({
+                      id: item.id,
+                      isFixed: Boolean(item.isFixed),
+                      type: item.type === '과제' ? '과제' : '학습',
+                    })}
                     onClick={(event) => event.stopPropagation()}
                     className={[
                       'truncate text-[10px] font-semibold transition hover:underline',
@@ -113,21 +125,12 @@ export default function PlannerDateGrid({
                 <div
                   className={[
                     'h-1.5 w-full overflow-hidden rounded-full',
-                    isSelected ? 'bg-white/30' : 'bg-neutral-300',
+                    'bg-[#D5EBFF]',
                   ].join(' ')}
                 >
                   <div
-                    className={[
-                      'h-full',
-                      isSelected
-                        ? isComplete
-                          ? 'bg-emerald-200'
-                          : 'bg-purple-200'
-                        : isComplete
-                        ? 'bg-emerald-400'
-                        : 'bg-purple-400',
-                    ].join(' ')}
-                    style={{ width: `${Math.round(progress * 100)}%` }}
+                    className="h-full"
+                    style={getProgressFillStyle(progressPercent)}
                   />
                 </div>
               </div>

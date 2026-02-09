@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTodosQuery } from "@/src/hooks/todoQueries";
 import { useFeedbacksQuery } from "@/src/hooks/feedbackQueries";
-import { getTodoSnapshot as getMockTodoSnapshot } from "@/src/services/todo.mock";
+import { useAuthMeQuery } from "@/src/hooks/authQueries";
 import FeedbackHeaderActions from "./FeedbackHeaderActions";
 import FeedbackList from "./FeedbackList";
 import FeedbackSortBar from "./FeedbackSortBar";
@@ -58,7 +58,15 @@ const feedbackReadStore = (() => {
 
 export default function FeedbackContent({ title }: Props) {
   const { data: todos = [] } = useTodosQuery();
-  const { data: feedbacks = [] } = useFeedbacksQuery();
+  const { data: me } = useAuthMeQuery();
+  const menteeId = useMemo(() => {
+    if (typeof me?.menteeId === "number") return me.menteeId;
+    if (typeof window === "undefined") return undefined;
+    const raw = window.localStorage.getItem("menteeId");
+    const parsed = raw ? Number(raw) : NaN;
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }, [me?.menteeId]);
+  const { data: feedbacks = [] } = useFeedbacksQuery({ menteeId });
   const [activeSubject, setActiveSubject] = useState<SubjectFilter>("전체");
   const rawReadIds = useSyncExternalStore(
     feedbackReadStore.subscribe,
@@ -82,8 +90,7 @@ export default function FeedbackContent({ title }: Props) {
   }, []);
 
   const feedbackItems = useMemo(() => {
-    const sourceTodos = todos.length > 0 ? todos : getMockTodoSnapshot();
-    const todoById = new Map(sourceTodos.map((todo) => [todo.id, todo]));
+    const todoById = new Map(todos.map((todo) => [todo.id, todo]));
     const mapped = feedbacks.map((feedback) => {
       const todo = feedback.todoItemId
         ? todoById.get(String(feedback.todoItemId))

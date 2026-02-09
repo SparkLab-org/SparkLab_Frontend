@@ -3,16 +3,21 @@
 import Link from 'next/link';
 import LoginCard, { LoginRole } from '@/src/components/auth/LoginCard';
 import { useUiPreferenceStore } from '@/src/store/uiPreferenceStore';
+import seolStudyIcon from '@/src/assets/icons/seolStudy.svg';
 
 export default function Home() {
   const role = useUiPreferenceStore((s) => s.homeRole);
   const setRole = useUiPreferenceStore((s) => s.setHomeRole);
+  const brandIconSrc = typeof seolStudyIcon === 'string' ? seolStudyIcon : seolStudyIcon?.src;
 
   return (
     <main className="min-h-screen bg-white text-neutral-900">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-12 px-6 py-12 lg:px-10">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {brandIconSrc ? (
+              <img src={brandIconSrc} alt="설스터디" className="h-9 w-9" />
+            ) : null}
             <div>
               <p className="text-3xl uppercase font-semibold text-neutral-900">설스터디</p>
               <p className="text-sm font-semibold text-neutral-500">학습 코칭 플랫폼</p>
@@ -34,7 +39,7 @@ export default function Home() {
             <div className="flex flex-wrap gap-2">
               <Link
                 href="/planner"
-                className="inline-flex items-center justify-center rounded-full bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
+                className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
               >
                 로그인 없이 멘티 화면 둘러보기
               </Link>

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useTodosQuery, useUpdateTodoMutation } from '@/src/hooks/todoQueries';
 import { isOverdueTask } from '@/src/lib/utils/todoStatus';
 import { useTimerStore } from '@/src/store/timerStore';
+import { getTodoDetailHref } from '@/src/lib/utils/todoLink';
 
 function formatHMS(totalSeconds: number) {
   const safe = Number.isFinite(totalSeconds) ? Math.max(0, Math.floor(totalSeconds)) : 0;
@@ -105,11 +106,11 @@ export default function TimerFloatingWidget() {
               openPanel();
             }
           }}
-          className="fixed bottom-23 left-3 z-40 flex items-center gap-2 rounded-full bg-neutral-900 px-4 py-2 text-xs font-semibold text-white shadow-lg"
+          className="fixed bottom-28 left-3 z-40 flex items-center gap-2 rounded-full bg-[#004DFF] px-4 py-2 text-xs font-semibold text-white shadow-lg"
         >
           <span className="h-2 w-2 animate-pulse rounded-full bg-rose-400" aria-hidden />
           <Link
-            href={`/planner/list/${activeTodo.id}`}
+            href={getTodoDetailHref(activeTodo)}
             onClick={(event) => {
               event.stopPropagation();
               closePanel();
@@ -124,12 +125,12 @@ export default function TimerFloatingWidget() {
       )}
 
       {isPanelOpen && activeTodo && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
           <div className="w-full max-w-md space-y-4 rounded-2xl bg-white p-4 shadow-xl">
             <div className="flex items-center justify-between">
               <div>
                 <Link
-                  href={`/planner/list/${activeTodo.id}`}
+                  href={getTodoDetailHref(activeTodo)}
                   onClick={() => closePanel()}
                   className="text-lg font-semibold text-neutral-900 hover:underline"
                 >
@@ -158,7 +159,7 @@ export default function TimerFloatingWidget() {
                   'flex-1 rounded-lg px-3 py-2 text-xs font-semibold',
                   isTimerDisabled
                     ? 'cursor-not-allowed bg-neutral-200 text-neutral-400'
-                    : 'bg-neutral-900 text-white',
+                    : 'bg-[#004DFF] text-white',
                 ].join(' ')}
               >
                 {isRunning ? '일시정지' : '시작'}

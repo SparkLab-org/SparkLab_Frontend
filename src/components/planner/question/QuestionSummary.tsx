@@ -32,7 +32,7 @@ export default function QuestionSummary() {
               className={[
                 'rounded-full px-2 py-0.5 text-[10px] font-semibold',
                 q.status === '답변중'
-                  ? 'bg-neutral-900 text-white'
+                  ? 'bg-[#004DFF] text-white'
                   : 'bg-neutral-200 text-neutral-600',
               ].join(' ')}
             >

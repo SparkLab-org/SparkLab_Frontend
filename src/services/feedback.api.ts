@@ -34,6 +34,12 @@ type FeedbackUpdateRequest = {
 
 const FEEDBACK_BASE_PATH = '/feedbacks';
 
+function normalizeTargetDate(value?: string) {
+  if (!value) return undefined;
+  if (value.includes('T')) return value;
+  return `${value}T00:00:00`;
+}
+
 function mapFeedbackFromApi(item: FeedbackApiItem): Feedback {
   return {
     id: String(item.feedbackId),
@@ -71,9 +77,13 @@ export async function getFeedback(feedbackId: number | string): Promise<Feedback
 }
 
 export async function createFeedback(input: FeedbackCreateRequest): Promise<Feedback> {
+  const payload = {
+    ...input,
+    targetDate: normalizeTargetDate(input.targetDate),
+  };
   const created = await apiFetch<FeedbackApiItem>(FEEDBACK_BASE_PATH, {
     method: 'POST',
-    body: JSON.stringify(input),
+    body: JSON.stringify(payload),
   });
   return mapFeedbackFromApi(created);
 }
@@ -82,9 +92,13 @@ export async function updateFeedback(
   feedbackId: number | string,
   patch: FeedbackUpdateRequest
 ): Promise<Feedback> {
+  const payload = {
+    ...patch,
+    targetDate: normalizeTargetDate(patch.targetDate),
+  };
   const updated = await apiFetch<FeedbackApiItem>(`${FEEDBACK_BASE_PATH}/${feedbackId}`, {
     method: 'PUT',
-    body: JSON.stringify(patch),
+    body: JSON.stringify(payload),
   });
   return mapFeedbackFromApi(updated);
 }

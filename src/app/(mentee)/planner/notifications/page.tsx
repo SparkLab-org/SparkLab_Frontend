@@ -12,8 +12,7 @@ export default function NotificationsPage() {
   const accountId = useMemo(() => {
     if (typeof window === 'undefined') return undefined;
     const raw = window.localStorage.getItem('accountId');
-    const parsed = raw ? Number(raw) : NaN;
-    return Number.isFinite(parsed) ? parsed : undefined;
+    return raw && raw.trim().length > 0 ? raw : undefined;
   }, []);
 
   const { data: notifications = [] } = useNotificationsQuery(accountId);

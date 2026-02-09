@@ -153,7 +153,7 @@ export default function MenteeTodoDetailView() {
               'rounded-xl px-4 py-2 text-xs font-semibold',
               updateTodoMutation.isPending
                 ? 'cursor-not-allowed bg-neutral-300 text-neutral-500'
-                : 'bg-neutral-900 text-white',
+                : 'bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] text-white',
             ].join(' ')}
           >
             {updateTodoMutation.isPending ? '저장 중...' : '피드백 저장'}

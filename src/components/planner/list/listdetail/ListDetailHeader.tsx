@@ -19,7 +19,7 @@ export default function ListDetailHeader({ title, checked, onToggle, disabled = 
         className={[
           'flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition ring-1',
           checked
-            ? 'bg-neutral-900 text-white ring-neutral-900'
+            ? 'bg-[#004DFF] text-white ring-[#004DFF]'
             : 'bg-white text-neutral-500 ring-neutral-200 hover:ring-neutral-300',
           disabled ? 'cursor-not-allowed opacity-60' : '',
         ].join(' ')}

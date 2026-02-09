@@ -7,10 +7,11 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useTodosQuery } from '@/src/hooks/todoQueries';
 import { getTodoStatusLabel } from '@/src/lib/utils/todoStatus';
+import { getTodoDetailHref } from '@/src/lib/utils/todoLink';
 
 export default function TodayTodoSummary() {
   const selectedDate = usePlannerStore((s) => s.selectedDate);
-  const { data: todos = [] } = useTodosQuery();
+  const { data: todos = [] } = useTodosQuery({ planDate: selectedDate });
 
   const todayTodos = useMemo(() => {
     return todos
@@ -56,7 +57,7 @@ export default function TodayTodoSummary() {
         {todayTodos.slice(0, 10).map((todo) => (
           <Link
             key={todo.id}
-            href={`/planner/list/${todo.id}`}
+            href={getTodoDetailHref(todo)}
             className="flex flex-row gap-2 rounded-xl bg-[#FFF] px-3 py-3 text-xs text-neutral-700 transition hover:ring-1 hover:ring-neutral-200"
           >
             <p className="text-sm font-semibold text-neutral-900">{todo.title}</p>

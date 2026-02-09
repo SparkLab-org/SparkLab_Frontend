@@ -15,7 +15,7 @@ export default function PlannerViewToggle({ view, onChange }: Props) {
         onClick={() => onChange('week')}
         className={[
           'rounded-full px-5 py-2',
-          view === 'week' ? 'bg-black text-white' : 'text-neutral-600',
+          view === 'week' ? 'bg-[#004DFF] text-white' : 'text-neutral-600',
         ].join(' ')}
       >
         주간
@@ -25,7 +25,7 @@ export default function PlannerViewToggle({ view, onChange }: Props) {
         onClick={() => onChange('month')}
         className={[
           'rounded-full px-5 py-2',
-          view === 'month' ? 'bg-black text-white' : 'text-neutral-600',
+          view === 'month' ? 'bg-[#004DFF] text-white' : 'text-neutral-600',
         ].join(' ')}
       >
         월간

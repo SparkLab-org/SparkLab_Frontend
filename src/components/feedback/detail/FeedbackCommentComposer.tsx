@@ -36,7 +36,7 @@ export default function FeedbackCommentComposer({ role, onSubmit }: Props) {
       <div className="mt-3 flex justify-end">
         <button
           type="submit"
-          className="rounded-full bg-neutral-900 px-4 py-2 text-xs font-semibold text-white hover:-translate-y-0.5 hover:shadow-lg"
+          className="rounded-full bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] px-4 py-2 text-xs font-semibold text-white hover:-translate-y-0.5 hover:shadow-lg"
         >
           등록
         </button>

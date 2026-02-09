@@ -25,7 +25,7 @@ function mapNotificationFromApi(item: NotificationApiItem): Notification {
   };
 }
 
-export async function listNotifications(accountId: number): Promise<Notification[]> {
+export async function listNotifications(accountId: string): Promise<Notification[]> {
   const items = await apiFetch<NotificationApiItem[]>(
     `${NOTIFICATION_BASE_PATH}?accountId=${accountId}`
   );

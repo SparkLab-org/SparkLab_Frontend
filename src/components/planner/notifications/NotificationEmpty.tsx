@@ -13,7 +13,7 @@ export default function NotificationEmpty() {
       </p>
       <Link
         href="/planner"
-        className="mt-4 inline-flex items-center justify-center rounded-full bg-neutral-900 px-4 py-2 text-xs font-semibold text-white"
+        className="mt-4 inline-flex items-center justify-center rounded-full bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] px-4 py-2 text-xs font-semibold text-white"
       >
         플래너로 이동
       </Link>

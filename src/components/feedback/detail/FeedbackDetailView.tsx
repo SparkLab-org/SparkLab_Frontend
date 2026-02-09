@@ -8,7 +8,6 @@ import {
   createFeedbackComment,
   listFeedbackComments,
 } from '@/src/services/feedback.api';
-import { getTodoSnapshot as getMockTodoSnapshot } from '@/src/services/todo.mock';
 import FeedbackDetailHeader from './FeedbackDetailHeader';
 import FeedbackCommentThread from './FeedbackCommentThread';
 import FeedbackCommentComposer from './FeedbackCommentComposer';
@@ -27,10 +26,12 @@ type Props = {
 
 export default function FeedbackDetailView({ todoId, role }: Props) {
   const { data: todos = [] } = useTodosQuery();
-  const { data: feedbacks = [] } = useFeedbacksQuery();
+  const todoItemId = Number(todoId);
+  const { data: feedbacks = [] } = useFeedbacksQuery({
+    todoItemId: Number.isFinite(todoItemId) ? todoItemId : undefined,
+  });
   const todo = useMemo(() => {
-    const sourceTodos = todos.length > 0 ? todos : getMockTodoSnapshot();
-    return sourceTodos.find((item) => item.id === todoId);
+    return todos.find((item) => item.id === todoId);
   }, [todos, todoId]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);

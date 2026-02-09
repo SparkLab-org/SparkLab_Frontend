@@ -5,13 +5,13 @@ export const notificationQueryKeys = {
   all: ['notifications'] as const,
 };
 
-export function useNotificationsQuery(accountId?: number) {
+export function useNotificationsQuery(accountId?: string) {
   return useQuery({
     queryKey: notificationQueryKeys.all,
     queryFn: () => {
-      if (typeof accountId !== 'number') return Promise.resolve([]);
+      if (!accountId) return Promise.resolve([]);
       return listNotifications(accountId);
     },
-    enabled: typeof accountId === 'number',
+    enabled: !!accountId,
   });
 }

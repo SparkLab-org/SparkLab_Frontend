@@ -1,14 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTodosQuery, useUpdateTodoMutation } from '@/src/hooks/todoQueries';
-import { getTodoSnapshot as getMockTodoSnapshot } from '@/src/services/todo.mock';
+import { useTodoDetailQuery, useUpdateTodoMutation } from '@/src/hooks/todoQueries';
 import { getTodoStatusLabel, isOverdueTask } from '@/src/lib/utils/todoStatus';
 import AssignmentSubmissionCard from './AssignmentSubmissionCard';
 import AssignmentAttachmentCard from '../list/listdetail/AssignmentAttachmentCard';
 import { useTimerStore } from '@/src/store/timerStore';
-import { submitAssignment } from '@/src/services/assignment.api';
+import {
+  submitAssignment,
+  updateAssignmentSubmission,
+  deleteAssignmentSubmission,
+  deleteAssignmentSubmissionComment,
+  type AssignmentSubmissionResponse,
+} from '@/src/services/assignment.api';
 
 type Props = {
   todoId: string;
@@ -16,35 +21,82 @@ type Props = {
 
 export default function AssignmentDetailView({ todoId }: Props) {
   const router = useRouter();
-  const { data: todos = [] } = useTodosQuery();
+  const { data: todo, isLoading } = useTodoDetailQuery(todoId);
   const updateTodoMutation = useUpdateTodoMutation();
   const [submittedAt, setSubmittedAt] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastSubmission, setLastSubmission] = useState<AssignmentSubmissionResponse | null>(null);
+  const [submissionComment, setSubmissionComment] = useState('');
+  const [isSubmissionBusy, setIsSubmissionBusy] = useState(false);
+  const updateFileRef = useRef<HTMLInputElement | null>(null);
   const openPanel = useTimerStore((s) => s.openPanel);
   const setActiveTodoId = useTimerStore((s) => s.setActiveTodoId);
-
-  const todo = useMemo(() => {
-    const sourceTodos = todos.length > 0 ? todos : getMockTodoSnapshot();
-    return sourceTodos.find((item) => item.id === todoId);
-  }, [todos, todoId]);
 
   const statusLabel = todo ? getTodoStatusLabel(todo) : '';
   const isLate = todo ? isOverdueTask(todo) : false;
   const isDone = todo?.status === 'DONE';
 
+  const storageKey = todo ? `assignment-submission:${todo.id}` : null;
+
+  useEffect(() => {
+    if (!storageKey || typeof window === 'undefined') return;
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as AssignmentSubmissionResponse;
+      if (parsed && parsed.submissionId) {
+        setLastSubmission(parsed);
+        setSubmissionComment(parsed.comment ?? '');
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [storageKey]);
+
+  const persistSubmission = (next: AssignmentSubmissionResponse | null) => {
+    setLastSubmission(next);
+    if (!storageKey || typeof window === 'undefined') return;
+    if (!next) {
+      window.localStorage.removeItem(storageKey);
+      return;
+    }
+    window.localStorage.setItem(storageKey, JSON.stringify(next));
+  };
+
+  const resolveLatestSubmission = (items: AssignmentSubmissionResponse[]) => {
+    if (items.length === 0) return null;
+    return items
+      .slice()
+      .sort((a, b) => {
+        const aTime = a.createTime ? Date.parse(a.createTime) : 0;
+        const bTime = b.createTime ? Date.parse(b.createTime) : 0;
+        return bTime - aTime;
+      })[0];
+  };
+
   const handleSubmit = (comment: string, files: File[]) => {
     if (!todo) return;
-    const file = files[0];
     setIsSubmitting(true);
     setSubmitError(null);
-    submitAssignment(Number(todo.id), file, comment)
-      .then(() => {
+    submitAssignment(Number(todo.id), files, comment)
+      .then((res) => {
+        const latest = resolveLatestSubmission(res.submissions);
+        if (latest) {
+          persistSubmission(latest);
+          setSubmissionComment(latest.comment ?? '');
+          if (latest.createTime) {
+            const parsed = Date.parse(latest.createTime);
+            if (!Number.isNaN(parsed)) setSubmittedAt(parsed);
+          }
+        }
         updateTodoMutation.mutate(
           { id: todo.id, patch: { status: 'DONE' } },
           {
             onSuccess: () => {
-              setSubmittedAt(Date.now());
+              if (!latest) {
+                setSubmittedAt(Date.now());
+              }
               setIsSubmitting(false);
             },
             onError: () => {
@@ -59,6 +111,95 @@ export default function AssignmentDetailView({ todoId }: Props) {
         setIsSubmitting(false);
       });
   };
+
+  const handleUpdateComment = () => {
+    if (!todo || !lastSubmission) return;
+    setIsSubmissionBusy(true);
+    setSubmitError(null);
+    updateAssignmentSubmission(
+      Number(todo.id),
+      lastSubmission.submissionId,
+      undefined,
+      submissionComment.trim()
+    )
+      .then((updated) => {
+        persistSubmission(updated);
+        setSubmissionComment(updated.comment ?? '');
+        setIsSubmissionBusy(false);
+      })
+      .catch(() => {
+        setSubmitError('제출 코멘트 수정에 실패했습니다.');
+        setIsSubmissionBusy(false);
+      });
+  };
+
+  const handlePickUpdateFile = () => {
+    if (isSubmissionBusy || !lastSubmission) return;
+    updateFileRef.current?.click();
+  };
+
+  const handleUpdateFile = (file: File) => {
+    if (!todo || !lastSubmission) return;
+    setIsSubmissionBusy(true);
+    setSubmitError(null);
+    updateAssignmentSubmission(
+      Number(todo.id),
+      lastSubmission.submissionId,
+      file,
+      submissionComment.trim()
+    )
+      .then((updated) => {
+        persistSubmission(updated);
+        setSubmissionComment(updated.comment ?? '');
+        setIsSubmissionBusy(false);
+      })
+      .catch(() => {
+        setSubmitError('재업로드에 실패했습니다.');
+        setIsSubmissionBusy(false);
+      });
+  };
+
+  const handleDeleteComment = () => {
+    if (!todo || !lastSubmission) return;
+    setIsSubmissionBusy(true);
+    setSubmitError(null);
+    deleteAssignmentSubmissionComment(Number(todo.id), lastSubmission.submissionId)
+      .then((updated) => {
+        persistSubmission(updated);
+        setSubmissionComment(updated.comment ?? '');
+        setIsSubmissionBusy(false);
+      })
+      .catch(() => {
+        setSubmitError('코멘트 삭제에 실패했습니다.');
+        setIsSubmissionBusy(false);
+      });
+  };
+
+  const handleDeleteSubmission = () => {
+    if (!todo || !lastSubmission) return;
+    setIsSubmissionBusy(true);
+    setSubmitError(null);
+    deleteAssignmentSubmission(Number(todo.id), lastSubmission.submissionId)
+      .then(() => {
+        persistSubmission(null);
+        setSubmissionComment('');
+        setSubmittedAt(null);
+        updateTodoMutation.mutate({ id: todo.id, patch: { status: 'TODO' } });
+        setIsSubmissionBusy(false);
+      })
+      .catch(() => {
+        setSubmitError('제출 삭제에 실패했습니다.');
+        setIsSubmissionBusy(false);
+      });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="rounded-2xl bg-[#F5F5F5] p-6 text-sm text-neutral-500">
+        과제 정보를 불러오는 중입니다.
+      </div>
+    );
+  }
 
   if (!todo) {
     return (
@@ -121,7 +262,7 @@ export default function AssignmentDetailView({ todoId }: Props) {
               setActiveTodoId(todo.id);
               openPanel();
             }}
-            className="rounded-full bg-neutral-900 px-3 py-1.5 text-xs font-semibold text-white"
+            className="rounded-full bg-[#004DFF] px-3 py-1.5 text-xs font-semibold text-white"
           >
             타이머
           </button>
@@ -139,6 +280,76 @@ export default function AssignmentDetailView({ todoId }: Props) {
         disabled={isDone || isSubmitting}
       />
 
+      {lastSubmission && (
+        <section className="rounded-2xl bg-[#F5F5F5] p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-lg font-semibold text-neutral-900">최근 제출</p>
+            <span className="text-xs text-neutral-500">
+              {lastSubmission.createTime ? formatIso(lastSubmission.createTime) : '방금 전'}
+            </span>
+          </div>
+          <div className="mt-3 space-y-3 rounded-xl bg-white px-3 py-4">
+            <div className="flex items-center justify-between gap-2 text-xs text-neutral-600">
+              <span>코멘트</span>
+              <span className="text-neutral-400">
+                {lastSubmission.status ?? '제출됨'}
+              </span>
+            </div>
+            <input
+              value={submissionComment}
+              onChange={(e) => setSubmissionComment(e.target.value)}
+              placeholder="제출 코멘트를 입력하세요."
+              className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-800 outline-none"
+              disabled={isSubmissionBusy}
+            />
+            {lastSubmission.imageUrl ? (
+              <a
+                href={lastSubmission.imageUrl}
+                className="block text-xs text-blue-600 hover:underline"
+              >
+                제출 파일 보기
+              </a>
+            ) : (
+              <p className="text-xs text-neutral-400">첨부 파일 정보가 없습니다.</p>
+            )}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handlePickUpdateFile}
+              disabled={isSubmissionBusy}
+              className="rounded-full bg-[#004DFF] px-4 py-2 text-xs font-semibold text-white"
+            >
+              재업로드
+            </button>
+            <button
+              type="button"
+              onClick={handleUpdateComment}
+              disabled={isSubmissionBusy}
+              className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700"
+            >
+              코멘트 수정
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteComment}
+              disabled={isSubmissionBusy}
+              className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-600"
+            >
+              코멘트 삭제
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteSubmission}
+              disabled={isSubmissionBusy}
+              className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-600"
+            >
+              제출 삭제
+            </button>
+          </div>
+        </section>
+      )}
+
       <div className="rounded-2xl bg-[#F5F5F5] p-4 text-xs text-neutral-500">
         {isLate
           ? '마감 이후 제출은 지각 처리됩니다.'
@@ -151,6 +362,20 @@ export default function AssignmentDetailView({ todoId }: Props) {
         {isSubmitting && <span className="ml-2 text-neutral-600">제출 중...</span>}
         {submitError && <p className="mt-2 text-rose-500">{submitError}</p>}
       </div>
+
+      <input
+        ref={updateFileRef}
+        type="file"
+        accept="image/*,application/pdf"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            handleUpdateFile(file);
+          }
+          event.target.value = '';
+        }}
+        className="hidden"
+      />
     </div>
   );
 }
@@ -171,4 +396,10 @@ function formatTimestamp(ms: number) {
   const hh = String(date.getHours()).padStart(2, '0');
   const min = String(date.getMinutes()).padStart(2, '0');
   return `${yyyy}.${mm}.${dd} ${hh}:${min}`;
+}
+
+function formatIso(value: string) {
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return value;
+  return formatTimestamp(parsed);
 }

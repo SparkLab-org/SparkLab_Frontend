@@ -27,7 +27,7 @@ export default function MentorMenteeListPanel({ mentees, selectedId, onSelect }:
               className={[
                 'flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left transition',
                 active
-                  ? 'bg-neutral-900 text-white'
+                  ? 'bg-[#004DFF] text-white'
                   : 'bg-white text-neutral-700 hover:bg-neutral-100',
               ].join(' ')}
             >

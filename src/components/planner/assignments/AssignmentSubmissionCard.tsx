@@ -63,7 +63,7 @@ export default function AssignmentSubmissionCard({ onSubmit, disabled = false }:
               'shrink-0 rounded-lg px-3 py-2 text-xs font-semibold',
               disabled
                 ? 'cursor-not-allowed bg-neutral-200 text-neutral-400'
-                : 'bg-neutral-900 text-white',
+                : 'bg-[#004DFF] text-white',
             ].join(' ')}
           >
             첨부하기
@@ -102,7 +102,7 @@ export default function AssignmentSubmissionCard({ onSubmit, disabled = false }:
             'rounded-full px-4 py-2 text-xs font-semibold',
             disabled
               ? 'cursor-not-allowed bg-neutral-200 text-neutral-400'
-              : 'bg-neutral-900 text-white',
+              : 'bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] text-white',
           ].join(' ')}
         >
           제출하기

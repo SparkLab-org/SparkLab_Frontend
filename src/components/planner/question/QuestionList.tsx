@@ -27,7 +27,7 @@ export default function QuestionList({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="inline-flex items-center gap-1 rounded-full bg-black px-3 py-1 text-[11px] font-semibold text-white"
+            className="inline-flex items-center gap-1 rounded-full bg-[#004DFF] px-3 py-1 text-[11px] font-semibold text-white"
           >
             최신순
             <span className="text-[10px]">⌄</span>
@@ -35,7 +35,7 @@ export default function QuestionList({
           {showCreate && (
             <Link
               href={`${basePath}/new`}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black text-white"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#004DFF] text-white"
               aria-label="질문 추가"
             >
               +
@@ -66,7 +66,7 @@ export default function QuestionList({
                 className={[
                   'rounded-full px-2 py-0.5 text-[10px] font-semibold',
                   q.status === '답변중'
-                    ? 'bg-neutral-900 text-white'
+                    ? 'bg-[#004DFF] text-white'
                     : 'bg-neutral-100 text-neutral-500',
                 ].join(' ')}
               >

@@ -45,7 +45,7 @@ export default function QuestionForm() {
                 className={[
                   'rounded-full px-3 py-1 text-xs font-semibold',
                   subject === item
-                    ? 'bg-black text-white'
+                    ? 'bg-[#004DFF] text-white'
                     : 'bg-white text-neutral-600',
                 ].join(' ')}
               >

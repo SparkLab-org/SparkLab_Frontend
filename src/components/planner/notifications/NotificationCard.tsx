@@ -81,7 +81,7 @@ export default function NotificationCard({
       <div
         className={[
           'flex h-8 w-8 items-center justify-center rounded-full',
-          isRead ? 'bg-neutral-200 text-neutral-600' : 'bg-neutral-900 text-white',
+          isRead ? 'bg-neutral-200 text-neutral-600' : 'bg-[#004DFF] text-white',
         ].join(' ')}
       >
         {iconForType(item.linkType)}
