@@ -17,6 +17,10 @@ const sampleMentees: Mentee[] = [
     grade: '고2',
     track: '수학 집중 과정',
     progress: 72,
+    subjects: ['국어', '수학'],
+    weaknessType: '계산 실수',
+    goalRate: 68,
+    activeLevel: 'WARNING',
     today: [
       { todo: '수학 문제집 30p', status: 'DONE', subject: '수학', duration: '1:10:36' },
       { todo: '영어 단어 2회독', status: 'TODO', subject: '영어', duration: '0:40:00' },
@@ -29,6 +33,10 @@ const sampleMentees: Mentee[] = [
     grade: '고1',
     track: '영어 리딩 강화',
     progress: 58,
+    subjects: ['영어'],
+    weaknessType: '시간 부족',
+    goalRate: 54,
+    activeLevel: 'NORMAL',
     today: [
       { todo: '영어 지문 3개 해석', status: 'DONE', subject: '영어', duration: '0:55:00' },
       { todo: '단어 테스트', status: 'DONE', subject: '영어', duration: '0:20:00' },
@@ -40,6 +48,10 @@ const sampleMentees: Mentee[] = [
     grade: '고3',
     track: '과학탐구 심화',
     progress: 44,
+    subjects: ['수학', '영어'],
+    weaknessType: '개념 누락',
+    goalRate: 32,
+    activeLevel: 'DANGER',
     today: [
       { todo: '화학 요약 2p', status: 'TODO', subject: '화학', duration: '0:25:00' },
       { todo: '물리 계산 연습', status: 'TODO', subject: '물리', duration: '0:30:00' },

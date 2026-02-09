@@ -72,7 +72,7 @@ export default function MenteeDetailView() {
 
   if (!selectedMentee) {
     return (
-      <div className="rounded-3xl bg-white p-6">
+      <div className="rounded-3xl bg-[#F5F5F5] p-6">
         <p className="text-sm text-neutral-500">멘티 정보를 찾을 수 없습니다.</p>
       </div>
     );
@@ -80,9 +80,9 @@ export default function MenteeDetailView() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl bg-white p-6">
-        <Link href="/mentor" className="text-xs text-neutral-500 hover:text-neutral-900">
-          ← 대시보드로 돌아가기
+      <section className="rounded-3xl bg-[#F5F5F5] p-6">
+        <Link href="/mentor/mentee" className="text-xs text-neutral-500 hover:text-neutral-900">
+          ← 멘티 목록으로 돌아가기
         </Link>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -93,20 +93,20 @@ export default function MenteeDetailView() {
               {selectedMentee.grade} · {selectedMentee.track}
             </p>
           </div>
-          <div className="rounded-2xl bg-neutral-100 px-4 py-2 text-xs text-neutral-600">
+          <div className="rounded-2xl bg-white px-4 py-2 text-xs text-neutral-600">
             총 과제 {totalCount}건
           </div>
         </div>
       </section>
 
-      <section className="rounded-3xl bg-white p-6">
+      <section className="rounded-3xl bg-[#F5F5F5] p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-neutral-900 lg:text-lg">성취도</h2>
           <span className="text-xs text-neutral-500">
             완료 {doneTodos.length} / {totalCount}
           </span>
         </div>
-        <div className="mt-4 rounded-2xl bg-neutral-100 p-4">
+        <div className="mt-4 rounded-2xl bg-white p-4">
           <div className="flex items-center justify-between text-xs text-neutral-500">
             <span>진행률</span>
             <span className="font-semibold text-neutral-900">{progressPercent}%</span>
@@ -120,25 +120,25 @@ export default function MenteeDetailView() {
         </div>
       </section>
 
-      <section className="rounded-3xl bg-white p-6">
+      <section className="rounded-3xl bg-[#F5F5F5] p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-neutral-900 lg:text-lg">과제 현황</h2>
           <span className="text-xs text-neutral-500">날짜별 보기</span>
         </div>
         <div className="mt-4 space-y-4">
           {groupedTodos.length === 0 && (
-            <div className="rounded-2xl bg-neutral-100 px-4 py-6 text-center text-sm text-neutral-500">
+            <div className="rounded-2xl bg-white px-4 py-6 text-center text-sm text-neutral-500">
               등록된 과제가 없습니다.
             </div>
           )}
           {groupedTodos.map((group) => (
-            <div key={group.date} className="rounded-2xl bg-neutral-100 p-4">
+            <div key={group.date} className="rounded-2xl bg-white p-4">
               <p className="text-sm font-semibold text-neutral-700">{group.date}</p>
               <div className="mt-3 space-y-2">
                 {group.todos.map((todo) => (
                   <div
                     key={todo.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 text-xs"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-neutral-100 px-4 py-3 text-xs"
                   >
                     <div>
                       <p className="text-sm font-semibold text-neutral-900">{todo.title}</p>
@@ -147,7 +147,7 @@ export default function MenteeDetailView() {
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-600">
+                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-neutral-600">
                         {getStatusLabel(todo)}
                       </span>
                       <Link
@@ -165,21 +165,21 @@ export default function MenteeDetailView() {
         </div>
       </section>
 
-      <section className="rounded-3xl bg-white p-6">
+      <section className="rounded-3xl bg-[#F5F5F5] p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-neutral-900 lg:text-lg">제출된 과제</h2>
           <span className="text-xs text-neutral-500">총 {doneTodos.length}건</span>
         </div>
         <div className="mt-4 space-y-2">
           {doneTodos.length === 0 && (
-            <div className="rounded-2xl bg-neutral-100 px-4 py-6 text-center text-sm text-neutral-500">
+            <div className="rounded-2xl bg-white px-4 py-6 text-center text-sm text-neutral-500">
               제출된 과제가 없습니다.
             </div>
           )}
           {doneTodos.map((todo) => (
             <div
               key={todo.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-neutral-100 px-4 py-3 text-xs"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-xs"
             >
               <div>
                 <p className="text-sm font-semibold text-neutral-900">{todo.title}</p>

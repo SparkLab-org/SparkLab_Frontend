@@ -1,5 +1,5 @@
-import MenteeIndexRedirect from '@/src/components/mentor/mentee/MenteeIndexRedirect';
+import MenteeListView from '@/src/components/mentor/mentee/MenteeListView';
 
 export default function MentorMenteeIndexPage() {
-  return <MenteeIndexRedirect />;
+  return <MenteeListView />;
 }

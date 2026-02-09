@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import MentorSidebar from '@/src/components/mentor/layout/MentorSidebar';
+import MentorTopBar from '@/src/components/mentor/layout/MentorTopBar';
 import { useAuthStore } from '@/src/store/authStore';
 
 export default function MentorLayout({ children }: { children: React.ReactNode }) {
@@ -23,10 +24,11 @@ export default function MentorLayout({ children }: { children: React.ReactNode }
   }, [isAuthenticated, role, router, pathname]);
 
   return (
-    <div className="min-h-screen bg-neutral-100">
-      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 py-6 lg:flex-row lg:items-start lg:px-6">
+    <div className="min-h-screen bg-white">
+      <MentorTopBar />
+      <div className="flex w-full flex-col lg:flex-row lg:items-start">
         <MentorSidebar />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 px-6 py-6">{children}</main>
       </div>
     </div>
   );

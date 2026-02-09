@@ -13,28 +13,16 @@ export default function Home() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-12 px-6 py-12 lg:px-10">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-black" aria-hidden />
             <div>
-              <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">Seolstudy</p>
-              <p className="text-sm font-semibold">학습 코칭 플랫폼</p>
+              <p className="text-3xl uppercase font-semibold text-neutral-900">설스터디</p>
+              <p className="text-sm font-semibold text-neutral-500">학습 코칭 플랫폼</p>
             </div>
-          </div>
-          <div className="hidden gap-4 text-sm font-medium text-neutral-600 md:flex">
-            <Link href="/planner" className="hover:text-neutral-900">
-              플래너
-            </Link>
-            <Link href="/feedback" className="hover:text-neutral-900">
-              피드백
-            </Link>
-            <Link href="/mentees" className="hover:text-neutral-900">
-              멘토 대시보드
-            </Link>
           </div>
         </header>
 
         <section className="grid gap-10 lg:grid-cols-2 lg:items-start">
           <div className="space-y-4">
-            <h1 className="text-3xl font-semibold leading-tight lg:text-4xl">설스터디</h1>
+            <h1 className="text-lg font-semibold leading-tight lg:text-4xl">로그인</h1>
             <p className="text-base text-neutral-600">
               멘티는 하루 플래너와 과제를, 멘토는 멘티 관리와 피드백을 한 곳에서.
             </p>

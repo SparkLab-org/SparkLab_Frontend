@@ -10,7 +10,7 @@ type Props = {
 
 export default function MentorQuestionPanel({ pendingCount, recentQuestions }: Props) {
   return (
-    <section className="rounded-3xl bg-white p-5">
+    <section className="rounded-3xl bg-[#F5F5F5] p-5">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-base font-semibold text-neutral-900 lg:text-lg">질문 현황</p>
@@ -28,7 +28,7 @@ export default function MentorQuestionPanel({ pendingCount, recentQuestions }: P
           <Link
             key={q.id}
             href={`/mentor/question/${q.id}`}
-            className="flex items-center justify-between rounded-2xl bg-neutral-100 px-4 py-3 text-xs text-neutral-700 transition hover:bg-neutral-200"
+            className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-xs text-neutral-700 transition hover:bg-neutral-100"
           >
             <span className="truncate font-semibold text-neutral-900">{q.title}</span>
             <span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-neutral-500">
@@ -37,7 +37,7 @@ export default function MentorQuestionPanel({ pendingCount, recentQuestions }: P
           </Link>
         ))}
         {recentQuestions.length === 0 && (
-          <div className="rounded-2xl bg-neutral-100 px-4 py-6 text-center text-xs text-neutral-400">
+          <div className="rounded-2xl bg-white px-4 py-6 text-center text-xs text-neutral-400">
             등록된 질문이 없습니다.
           </div>
         )}

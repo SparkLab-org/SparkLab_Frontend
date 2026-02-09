@@ -7,7 +7,7 @@ type Props = {
 
 export default function MentorGreetingCard({ mentorName, dateLabel }: Props) {
   return (
-    <header className="flex h-full flex-col justify-between gap-6 rounded-3xl bg-white p-6">
+    <header className="flex h-full flex-col justify-between gap-6 rounded-3xl bg-[#F5F5F5] p-6">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-400">
           Mentor Dashboard

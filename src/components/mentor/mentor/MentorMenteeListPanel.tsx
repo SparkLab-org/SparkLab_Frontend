@@ -11,7 +11,7 @@ type Props = {
 
 export default function MentorMenteeListPanel({ mentees, selectedId, onSelect }: Props) {
   return (
-    <section className="rounded-3xl bg-white p-5">
+    <section className="rounded-3xl bg-[#F5F5F5] p-5">
       <div className="flex items-center justify-between">
         <p className="text-base font-semibold text-neutral-900 lg:text-lg">담당 멘티</p>
         <span className="text-xs text-neutral-500">총 {mentees.length}명</span>
@@ -28,7 +28,7 @@ export default function MentorMenteeListPanel({ mentees, selectedId, onSelect }:
                 'flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left transition',
                 active
                   ? 'bg-neutral-900 text-white'
-                  : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200',
+                  : 'bg-white text-neutral-700 hover:bg-neutral-100',
               ].join(' ')}
             >
               <div className="flex items-center gap-3">

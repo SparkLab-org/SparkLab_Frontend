@@ -2,58 +2,74 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Settings } from 'lucide-react';
+import feedbackIcon from '@/src/assets/icons/feedback.svg';
+import feedbackActiveIcon from '@/src/assets/icons/feedbackActive.svg';
+import menteesIcon from '@/src/assets/icons/mentees.svg';
+import menteesActiveIcon from '@/src/assets/icons/menteesActive.svg';
+import plannerIcon from '@/src/assets/icons/planner.svg';
+import plannerActiveIcon from '@/src/assets/icons/plannerActive.svg';
 
 const navItems = [
-  { href: '/mentor', label: '대시보드' },
-  { href: '/mentor/question', label: '질문' },
-  { href: '/mentor/mentee', label: '멘티' },
+  {
+    href: '/mentor/mentee',
+    label: '멘티',
+    icon: menteesIcon,
+    iconActive: menteesActiveIcon,
+  },
+  {
+    href: '/mentor/planner',
+    label: '플래너',
+    icon: plannerIcon,
+    iconActive: plannerActiveIcon,
+  },
+  {
+    href: '/mentor/feedback',
+    label: '피드백',
+    icon: feedbackIcon,
+    iconActive: feedbackActiveIcon,
+  },
 ];
 
 export default function MentorSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-full shrink-0 lg:max-w-[240px] lg:sticky lg:top-6">
-      <div className="flex h-full flex-col gap-6 rounded-3xl bg-white p-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-neutral-900 text-sm font-semibold text-white">
-            SL
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-neutral-900">멘토 센터</p>
-            <p className="text-xs text-neutral-400">Dashboard</p>
-          </div>
-        </div>
-
-        <input
-          placeholder="검색"
-          className="w-full rounded-full bg-neutral-100 px-3 py-2 text-xs text-neutral-600"
-        />
-
+    <aside className="w-full shrink-0  border-[#F5F5F5] lg:max-w-[220px] lg:sticky lg:top-[88px]">
+      <div className="flex h-full flex-col gap-6 bg-white px-4 py-6">
         <nav className="space-y-1 text-sm">
           {navItems.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const iconValue = active ? item.iconActive ?? item.icon : item.icon ?? item.iconActive;
+            const iconSrc = typeof iconValue === 'string' ? iconValue : iconValue?.src;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={[
-                  'flex items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition',
+                  'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition',
                   active
-                    ? 'bg-neutral-900 text-white'
-                    : 'text-neutral-500 hover:bg-neutral-100',
+                    ? 'bg-neutral-100 text-[#0528F3]'
+                    : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700',
                 ].join(' ')}
               >
+                {iconSrc ? (
+                  <img className="h-5 w-5" src={iconSrc} alt="" aria-hidden />
+                ) : null}
                 <span>{item.label}</span>
-                {active && <span className="text-[10px]">●</span>}
               </Link>
             );
           })}
         </nav>
 
-        <div className="mt-auto rounded-2xl bg-neutral-100 px-3 py-3 text-xs text-neutral-500">
-          <p className="font-semibold text-neutral-700">접속 상태</p>
-          <p className="mt-1">멘토 계정 · 정상</p>
+        <div className="mt-auto">
+          <button
+            type="button"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700"
+          >
+            <Settings className="h-4 w-4" />
+            설정
+          </button>
         </div>
       </div>
     </aside>
