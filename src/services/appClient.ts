@@ -6,7 +6,7 @@
  * - 401 응답 시 토큰 삭제 및 로그인 처리
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api';
 
 let authMeInFlight: Promise<void> | null = null;
 
