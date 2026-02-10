@@ -239,12 +239,22 @@ export default function MentorFeedbackView() {
     activeMenteeCard,
   ]);
 
-  const displayTodos =
-    menteeTodos.length > 0
-      ? menteeTodos
-      : todoStatusTodos.length > 0
-      ? todoStatusTodos
-      : fallbackTodos;
+  const displayTodos = useMemo(() => {
+    const merged = new Map<string, Todo>();
+    menteeTodos.forEach((todo) => {
+      merged.set(String(todo.id), todo);
+    });
+    todoStatusTodos.forEach((todo) => {
+      const existing = merged.get(String(todo.id));
+      if (!existing || existing.status !== 'DONE') {
+        merged.set(String(todo.id), todo);
+      }
+    });
+    if (merged.size === 0) {
+      fallbackTodos.forEach((todo) => merged.set(String(todo.id), todo));
+    }
+    return Array.from(merged.values());
+  }, [menteeTodos, todoStatusTodos, fallbackTodos]);
 
   const filterByType = (list: Todo[]) => {
     if (activeType === '전체') return list;

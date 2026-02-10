@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { CreateTodoInput, ListTodosParams, UpdateTodoInput } from '@/src/services/todo.api';
+import type {
+  CreateTodoInput,
+  ListTodosParams,
+  UpdateTodoInputWithExtras,
+} from '@/src/services/todo.api';
 import {
   createFixedTodo,
   createTodo,
@@ -9,6 +13,7 @@ import {
   getTodo,
   listTodos,
   updateTodo,
+  updateFixedTodo,
 } from '@/src/services/todo.api';
 
 export const todoQueryKeys = {
@@ -176,7 +181,19 @@ export function useUpdateTodoMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: UpdateTodoInput }) => updateTodo(id, patch),
+    mutationFn: ({
+      id,
+      patch,
+      isFixed,
+    }: {
+      id: string;
+      patch: UpdateTodoInputWithExtras;
+      isFixed?: boolean;
+    }) => {
+      const useFixed =
+        typeof isFixed === 'boolean' ? isFixed : Boolean(patch.isFixed);
+      return useFixed ? updateFixedTodo(id, patch) : updateTodo(id, patch);
+    },
     onSuccess: (updated) => {
       if (!updated) return;
       clearRangeCache();

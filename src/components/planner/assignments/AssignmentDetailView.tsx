@@ -9,6 +9,7 @@ import AssignmentAttachmentCard from '../list/listdetail/AssignmentAttachmentCar
 import { useTimerStore } from '@/src/store/timerStore';
 import {
   submitAssignment,
+  listAssignmentSubmissions,
   updateAssignmentSubmission,
   deleteAssignmentSubmission,
   deleteAssignmentSubmissionComment,
@@ -29,6 +30,7 @@ export default function AssignmentDetailView({ todoId }: Props) {
   const [lastSubmission, setLastSubmission] = useState<AssignmentSubmissionResponse | null>(null);
   const [submissionComment, setSubmissionComment] = useState('');
   const [isSubmissionBusy, setIsSubmissionBusy] = useState(false);
+  const [isSubmissionLoading, setIsSubmissionLoading] = useState(false);
   const updateFileRef = useRef<HTMLInputElement | null>(null);
   const openPanel = useTimerStore((s) => s.openPanel);
   const setActiveTodoId = useTimerStore((s) => s.setActiveTodoId);
@@ -88,6 +90,37 @@ export default function AssignmentDetailView({ todoId }: Props) {
       })[0];
   };
 
+  useEffect(() => {
+    if (!todo) return;
+    const assignmentId = resolveAssignmentId();
+    if (!assignmentId) return;
+    if (lastSubmission && lastSubmission.imageUrl) return;
+    let cancelled = false;
+    setIsSubmissionLoading(true);
+    listAssignmentSubmissions(assignmentId)
+      .then((res) => {
+        if (cancelled) return;
+        const latest = resolveLatestSubmission(res.submissions);
+        if (latest) {
+          persistSubmission(latest);
+          setSubmissionComment(latest.comment ?? '');
+          if (latest.createTime) {
+            const parsed = Date.parse(latest.createTime);
+            if (!Number.isNaN(parsed)) setSubmittedAt(parsed);
+          }
+        }
+      })
+      .catch(() => {
+        // ignore fetch errors (endpoint may not exist)
+      })
+      .finally(() => {
+        if (!cancelled) setIsSubmissionLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [todo, lastSubmission]);
+
   const handleSubmit = (comment: string, files: File[]) => {
     if (!todo) return;
     const assignmentId = resolveAssignmentId();
@@ -109,7 +142,11 @@ export default function AssignmentDetailView({ todoId }: Props) {
           }
         }
         updateTodoMutation.mutate(
-          { id: todo.id, patch: { status: 'DONE' } },
+          {
+            id: todo.id,
+            patch: { status: 'DONE', completedAt: new Date().toISOString() },
+            isFixed: todo.isFixed,
+          },
           {
             onSuccess: () => {
               if (!latest) {
@@ -222,7 +259,11 @@ export default function AssignmentDetailView({ todoId }: Props) {
         persistSubmission(null);
         setSubmissionComment('');
         setSubmittedAt(null);
-        updateTodoMutation.mutate({ id: todo.id, patch: { status: 'TODO' } });
+        updateTodoMutation.mutate({
+          id: todo.id,
+          patch: { status: 'TODO', completedAt: null },
+          isFixed: todo.isFixed,
+        });
         setIsSubmissionBusy(false);
       })
       .catch(() => {
@@ -347,6 +388,8 @@ export default function AssignmentDetailView({ todoId }: Props) {
               >
                 제출 파일 보기
               </a>
+            ) : isSubmissionLoading ? (
+              <p className="text-xs text-neutral-400">제출 파일을 확인하는 중...</p>
             ) : (
               <p className="text-xs text-neutral-400">첨부 파일 정보가 없습니다.</p>
             )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Todo } from '@/src/lib/types/planner';
 import { formatSeconds } from '@/src/components/mentor/feedback/mentorFeedbackUtils';
 import { getProgressFillStyle } from '@/src/lib/utils/progressStyle';
@@ -11,6 +11,11 @@ import {
   createFeedbackComment,
   listFeedbackComments,
 } from '@/src/services/feedback.api';
+import {
+  listAssignmentSubmissions,
+  type AssignmentSubmissionResponse,
+} from '@/src/services/assignment.api';
+import { downloadFile } from '@/src/lib/utils/downloadFile';
 
 type Props = {
   todo: Todo | null;
@@ -29,11 +34,19 @@ export default function MentorFeedbackDetailPanel({
 }: Props) {
   const { data: detailTodo } = useTodoDetailQuery(todo?.id);
   const resolvedTodo = detailTodo ?? todo;
+  const assignmentId = useMemo(() => {
+    const raw = resolvedTodo?.assignmentId;
+    return typeof raw === 'number' ? raw : null;
+  }, [resolvedTodo?.assignmentId]);
   const [comments, setComments] = useState<
     { id: string; role: 'mentee' | 'mentor'; content: string; createdAt: number }[]
   >([]);
   const [commentError, setCommentError] = useState<string | null>(null);
   const [commentLoading, setCommentLoading] = useState(false);
+  const [submissions, setSubmissions] = useState<AssignmentSubmissionResponse[]>([]);
+  const [submissionLoading, setSubmissionLoading] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!feedbackId) {
@@ -61,6 +74,27 @@ export default function MentorFeedbackDetailPanel({
       });
   }, [feedbackId]);
 
+  useEffect(() => {
+    if (!assignmentId) {
+      setSubmissions([]);
+      setSubmissionError(null);
+      setSubmissionLoading(false);
+      return;
+    }
+    setSubmissionLoading(true);
+    setSubmissionError(null);
+    listAssignmentSubmissions(assignmentId)
+      .then((res) => {
+        setSubmissions(res.submissions ?? []);
+        setSubmissionLoading(false);
+      })
+      .catch(() => {
+        setSubmissionError('제출물을 불러오지 못했습니다.');
+        setSubmissions([]);
+        setSubmissionLoading(false);
+      });
+  }, [assignmentId]);
+
   const handleSubmitComment = (content: string) => {
     if (!feedbackId) return;
     createFeedbackComment(feedbackId, { type: 'MENTOR_REPLY', content })
@@ -77,6 +111,20 @@ export default function MentorFeedbackDetailPanel({
       .catch(() => {
         setCommentError('댓글 등록에 실패했습니다.');
       });
+  };
+
+  const handleDownload = async (url?: string | null, name?: string | null) => {
+    if (!url) return;
+    setDownloadError(null);
+    try {
+      await downloadFile(url, name ?? undefined);
+    } catch {
+      try {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch {
+        setDownloadError('다운로드에 실패했습니다.');
+      }
+    }
   };
 
   return (
@@ -134,23 +182,57 @@ export default function MentorFeedbackDetailPanel({
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-900">멘티 제출물</h3>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {resolvedTodo?.guideFileUrl ? (
-            <a
-              href={resolvedTodo.guideFileUrl}
-              className="flex h-24 items-center justify-center rounded-2xl bg-neutral-200 text-xs text-neutral-500"
-            >
-              {resolvedTodo.guideFileName ?? '첨부파일'}
-            </a>
-          ) : (
-            Array.from({ length: 4 }).map((_, index) => (
-              <div
-                key={`placeholder-${index}`}
-                className="h-24 rounded-2xl bg-neutral-200"
-              />
-            ))
-          )}
-        </div>
+        {submissionLoading ? (
+          <div className="rounded-2xl bg-white p-4 text-sm text-neutral-500">
+            제출물을 불러오는 중...
+          </div>
+        ) : submissionError ? (
+          <div className="rounded-2xl bg-white p-4 text-sm text-rose-500">
+            {submissionError}
+          </div>
+        ) : submissions.length === 0 ? (
+          <div className="rounded-2xl bg-white p-4 text-sm text-neutral-500">
+            제출 파일이 아직 없습니다.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {submissions.map((item) => (
+              <div key={item.submissionId} className="space-y-2">
+                <div className="group flex h-24 items-center justify-center overflow-hidden rounded-2xl bg-neutral-200 text-xs text-neutral-500">
+                  {item.imageUrl ? (
+                    <img
+                      src={item.imageUrl}
+                      alt="제출물"
+                      className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                    />
+                  ) : (
+                    '첨부파일'
+                  )}
+                </div>
+                {item.imageUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDownload(item.imageUrl, `submission-${item.submissionId}`)}
+                    className="inline-flex w-full items-center justify-center rounded-lg border border-neutral-200 bg-white px-2 py-1 text-[11px] font-semibold text-neutral-700 hover:text-neutral-900"
+                  >
+                    다운로드
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex w-full items-center justify-center rounded-lg border border-neutral-200 bg-neutral-100 px-2 py-1 text-[11px] font-semibold text-neutral-400"
+                  >
+                    다운로드
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {downloadError && (
+          <p className="text-xs font-semibold text-rose-500">{downloadError}</p>
+        )}
       </section>
 
       <div className="flex items-center gap-3">

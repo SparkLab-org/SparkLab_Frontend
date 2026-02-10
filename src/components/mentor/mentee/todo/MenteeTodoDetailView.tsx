@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
 import { useMentorStore } from '@/src/store/mentorStore';
-import { useTodosQuery } from '@/src/hooks/todoQueries';
+import { useTodoDetailQuery, useTodosQuery } from '@/src/hooks/todoQueries';
 import { useAuthMeQuery } from '@/src/hooks/authQueries';
 import {
   useCreateFeedbackMutation,
@@ -14,6 +14,11 @@ import {
 } from '@/src/hooks/feedbackQueries';
 import { isOverdueTask } from '@/src/lib/utils/todoStatus';
 import type { Todo } from '@/src/lib/types/planner';
+import {
+  listAssignmentSubmissions,
+  type AssignmentSubmissionResponse,
+} from '@/src/services/assignment.api';
+import { downloadFile } from '@/src/lib/utils/downloadFile';
 
 const DEFAULT_MENTEE_ID = 'm1';
 
@@ -59,11 +64,19 @@ export default function MenteeTodoDetailView() {
   const createFeedbackMutation = useCreateFeedbackMutation();
   const updateFeedbackMutation = useUpdateFeedbackMutation();
   const todo = useMemo(() => todos.find((item) => item.id === todoId), [todos, todoId]);
+  const { data: detailTodo } = useTodoDetailQuery(todo?.id ?? todoId);
+  const resolvedTodo = detailTodo ?? todo;
+  const assignmentId =
+    typeof resolvedTodo?.assignmentId === 'number' ? resolvedTodo.assignmentId : null;
 
   const [draft, setDraft] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const todoItemId = Number(todo?.id ?? todoId);
+  const [submissions, setSubmissions] = useState<AssignmentSubmissionResponse[]>([]);
+  const [submissionLoading, setSubmissionLoading] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const todoItemId = Number(resolvedTodo?.id ?? todoId);
   const { data: feedbacks = [] } = useFeedbacksQuery({
     todoItemId: Number.isFinite(todoItemId) ? todoItemId : undefined,
   });
@@ -73,18 +86,39 @@ export default function MenteeTodoDetailView() {
       setDraft(existingFeedback.content);
       return;
     }
-    if (typeof window !== 'undefined' && todo?.id) {
-      const cached = window.localStorage.getItem(`todoFeedback:${todo.id}`);
+    if (typeof window !== 'undefined' && resolvedTodo?.id) {
+      const cached = window.localStorage.getItem(`todoFeedback:${resolvedTodo.id}`);
       if (cached !== null) {
         setDraft(cached);
         return;
       }
     }
-    setDraft(todo?.feedback ?? '');
-  }, [todo?.feedback, todo?.id, existingFeedback?.content]);
+    setDraft(resolvedTodo?.feedback ?? '');
+  }, [resolvedTodo?.feedback, resolvedTodo?.id, existingFeedback?.content]);
+
+  useEffect(() => {
+    if (!assignmentId) {
+      setSubmissions([]);
+      setSubmissionError(null);
+      setSubmissionLoading(false);
+      return;
+    }
+    setSubmissionLoading(true);
+    setSubmissionError(null);
+    listAssignmentSubmissions(assignmentId)
+      .then((res) => {
+        setSubmissions(res.submissions ?? []);
+        setSubmissionLoading(false);
+      })
+      .catch(() => {
+        setSubmissionError('제출물을 불러오지 못했습니다.');
+        setSubmissions([]);
+        setSubmissionLoading(false);
+      });
+  }, [assignmentId]);
 
   const handleSaveFeedback = async () => {
-    if (!todo) return;
+    if (!resolvedTodo) return;
     setSaveError(null);
     setSaveSuccess(false);
     const mentorId = typeof me?.mentorId === 'number' ? me.mentorId : undefined;
@@ -100,11 +134,11 @@ export default function MenteeTodoDetailView() {
           await updateFeedbackMutation.mutateAsync({
             id: existingFeedback.id,
             patch: {
-              title: todo.title,
-              summary: todo.title,
+              title: resolvedTodo.title,
+              summary: resolvedTodo.title,
               content: draft.trim(),
               todoItemId,
-              targetDate: todo.dueDate,
+              targetDate: resolvedTodo.dueDate,
             },
           });
         } else {
@@ -112,14 +146,14 @@ export default function MenteeTodoDetailView() {
             mentorId,
             menteeId: menteeIdNum,
             todoItemId,
-            targetDate: todo.dueDate,
-            title: todo.title,
-            summary: todo.title,
+            targetDate: resolvedTodo.dueDate,
+            title: resolvedTodo.title,
+            summary: resolvedTodo.title,
             content: draft.trim(),
           });
         }
       } else if (typeof window !== 'undefined') {
-        window.localStorage.setItem(`todoFeedback:${todo.id}`, draft.trim());
+        window.localStorage.setItem(`todoFeedback:${resolvedTodo.id}`, draft.trim());
       }
       setSaveSuccess(true);
     } catch {
@@ -127,7 +161,21 @@ export default function MenteeTodoDetailView() {
     }
   };
 
-  if (!todo) {
+  const handleDownload = async (url?: string | null, name?: string | null) => {
+    if (!url) return;
+    setDownloadError(null);
+    try {
+      await downloadFile(url, name ?? undefined);
+    } catch {
+      try {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch {
+        setDownloadError('다운로드에 실패했습니다.');
+      }
+    }
+  };
+
+  if (!resolvedTodo) {
     return (
       <div className="rounded-3xl bg-white p-6">
         <Link
@@ -141,7 +189,7 @@ export default function MenteeTodoDetailView() {
     );
   }
 
-  const statusLabel = getStatusLabel(todo);
+  const statusLabel = getStatusLabel(resolvedTodo);
 
   return (
     <div className="space-y-6">
@@ -154,9 +202,12 @@ export default function MenteeTodoDetailView() {
         </Link>
         <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-neutral-900 lg:text-2xl">{todo.title}</h1>
+            <h1 className="text-xl font-semibold text-neutral-900 lg:text-2xl">
+              {resolvedTodo.title}
+            </h1>
             <p className="mt-1 text-xs text-neutral-500">
-              {todo.subject} · {todo.type} · {todo.dueDate} {todo.dueTime}
+              {resolvedTodo.subject} · {resolvedTodo.type} · {resolvedTodo.dueDate}{' '}
+              {resolvedTodo.dueTime}
             </p>
           </div>
           <span className="rounded-full bg-white px-3 py-1 text-xs text-neutral-600">
@@ -171,22 +222,26 @@ export default function MenteeTodoDetailView() {
           <div className="rounded-2xl bg-white p-4">
             <p className="text-xs font-semibold text-neutral-500">목표</p>
             <p className="mt-2 text-sm text-neutral-900">
-              {todo.goal && todo.goal.trim() ? todo.goal : '등록된 목표가 없습니다.'}
+              {resolvedTodo.goal && resolvedTodo.goal.trim()
+                ? resolvedTodo.goal
+                : '등록된 목표가 없습니다.'}
             </p>
           </div>
           <div className="rounded-2xl bg-white p-4">
             <p className="text-xs font-semibold text-neutral-500">누적 학습 시간</p>
-            <p className="mt-2 text-sm text-neutral-900">{formatSeconds(todo.studySeconds)}</p>
+            <p className="mt-2 text-sm text-neutral-900">
+              {formatSeconds(resolvedTodo.studySeconds)}
+            </p>
           </div>
           <div className="rounded-2xl bg-white p-4 md:col-span-2">
             <p className="text-xs font-semibold text-neutral-500">학습지</p>
-            {todo.guideFileUrl ? (
+            {resolvedTodo.guideFileUrl ? (
               <a
-                href={todo.guideFileUrl}
+                href={resolvedTodo.guideFileUrl}
                 download
                 className="mt-2 inline-flex text-sm font-semibold text-neutral-700 hover:text-neutral-900"
               >
-                {todo.guideFileName ?? '학습지 다운로드'} →
+                {resolvedTodo.guideFileName ?? '학습지 다운로드'} →
               </a>
             ) : (
               <p className="mt-2 text-sm text-neutral-500">등록된 학습지가 없습니다.</p>
@@ -197,9 +252,57 @@ export default function MenteeTodoDetailView() {
 
       <section className="rounded-3xl bg-white p-6">
         <h2 className="text-base font-semibold text-neutral-900 lg:text-lg">멘티 제출물</h2>
-        <div className="mt-4 rounded-2xl bg-white px-4 py-6 text-center text-sm text-neutral-500">
-          제출 파일이 아직 없습니다.
-        </div>
+        {submissionLoading ? (
+          <div className="mt-4 rounded-2xl bg-white px-4 py-6 text-center text-sm text-neutral-500">
+            제출물을 불러오는 중...
+          </div>
+        ) : submissionError ? (
+          <div className="mt-4 rounded-2xl bg-white px-4 py-6 text-center text-sm text-rose-500">
+            {submissionError}
+          </div>
+        ) : submissions.length === 0 ? (
+          <div className="mt-4 rounded-2xl bg-white px-4 py-6 text-center text-sm text-neutral-500">
+            제출 파일이 아직 없습니다.
+          </div>
+        ) : (
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {submissions.map((item) => (
+              <div key={item.submissionId} className="space-y-2">
+                <div className="group flex h-28 items-center justify-center overflow-hidden rounded-2xl bg-neutral-200 text-xs text-neutral-500">
+                  {item.imageUrl ? (
+                    <img
+                      src={item.imageUrl}
+                      alt="제출물"
+                      className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                    />
+                  ) : (
+                    '첨부파일'
+                  )}
+                </div>
+                {item.imageUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDownload(item.imageUrl, `submission-${item.submissionId}`)}
+                    className="inline-flex w-full items-center justify-center rounded-lg border border-neutral-200 bg-white px-2 py-1 text-[11px] font-semibold text-neutral-700 hover:text-neutral-900"
+                  >
+                    다운로드
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex w-full items-center justify-center rounded-lg border border-neutral-200 bg-neutral-100 px-2 py-1 text-[11px] font-semibold text-neutral-400"
+                  >
+                    다운로드
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {downloadError && (
+          <p className="mt-2 text-xs font-semibold text-rose-500">{downloadError}</p>
+        )}
       </section>
 
       <section className="rounded-3xl bg-white p-6">

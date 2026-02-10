@@ -4,6 +4,7 @@ export type TodoType = '과제' | '학습';
 
 export interface Todo {
   id: string;
+  assignmentId?: number | null;
   title: string;
   isFixed: boolean;      // 멘토 고정(멘티 수정 불가)
   status: TodoStatus;

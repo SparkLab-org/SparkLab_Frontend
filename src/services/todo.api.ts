@@ -58,6 +58,7 @@ type TodoApiType = 'TASK' | 'ASSIGNMENT' | 'HOMEWORK' | 'STUDY' | string;
 type TodoApiItem = {
   todoItemId: number;
   plannerId?: number;
+  assignmentId?: number;
   targetDate: string;
   title: string;
   subject: TodoApiSubject;
@@ -198,6 +199,8 @@ function isValidDateString(value?: string): value is string {
 function mapTodoFromApi(item: TodoApiItem): Todo {
   const base: Todo = {
     id: String(item.todoItemId),
+    assignmentId:
+      typeof item.assignmentId === 'number' ? item.assignmentId : null,
     title: item.title ?? '',
     isFixed: item.isFixed ?? false,
     type: toTodoType(item.type, item.isFixed),

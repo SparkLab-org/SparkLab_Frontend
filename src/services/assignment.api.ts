@@ -56,6 +56,15 @@ export async function submitAssignment(
   return normalizeBatchResponse(response);
 }
 
+export async function listAssignmentSubmissions(
+  assignmentId: number
+): Promise<AssignmentSubmissionBatchResponse> {
+  const response = await apiFetch<
+    AssignmentSubmissionBatchResponse | AssignmentSubmissionResponse
+  >(`/assignments/${assignmentId}/submissions`);
+  return normalizeBatchResponse(response);
+}
+
 export async function updateAssignmentSubmission(
   assignmentId: number,
   submissionId: number,
