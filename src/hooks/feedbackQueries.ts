@@ -133,7 +133,10 @@ export function useTodoFeedbackStatusRangeQuery(params?: {
           const index = cursor++;
           const planDate = dates[index];
           try {
-            const items = await listTodoFeedbackStatus({ menteeId, planDate });
+            const items = await listTodoFeedbackStatus({
+              menteeId: menteeId as number,
+              planDate,
+            });
             results[index] = items;
           } catch {
             results[index] = [];

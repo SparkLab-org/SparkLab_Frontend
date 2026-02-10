@@ -47,6 +47,15 @@ export default function MentorFeedbackDetailPanel({
   const [submissionLoading, setSubmissionLoading] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const latestSubmission = useMemo(() => {
+    if (submissions.length === 0) return null;
+    return submissions.reduce<AssignmentSubmissionResponse | null>((latest, current) => {
+      if (!latest) return current;
+      const latestTime = latest.createTime ? Date.parse(latest.createTime) : 0;
+      const currentTime = current.createTime ? Date.parse(current.createTime) : 0;
+      return currentTime >= latestTime ? current : latest;
+    }, null);
+  }, [submissions]);
 
   useEffect(() => {
     if (!feedbackId) {
@@ -58,7 +67,12 @@ export default function MentorFeedbackDetailPanel({
     setCommentError(null);
     listFeedbackComments(feedbackId)
       .then((items) => {
-        const mapped = items.map((item) => ({
+        const mapped: {
+          id: string;
+          role: 'mentee' | 'mentor';
+          content: string;
+          createdAt: number;
+        }[] = items.map((item) => ({
           id: String(item.feedbackCommentId),
           role: item.type === 'MENTOR_REPLY' ? 'mentor' : 'mentee',
           content: item.content,
@@ -196,8 +210,11 @@ export default function MentorFeedbackDetailPanel({
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {submissions.map((item) => (
-              <div key={item.submissionId} className="space-y-2">
+            {submissions.map((item, index) => (
+              <div
+                key={`${item.submissionId ?? 'submission'}-${index}`}
+                className="space-y-2"
+              >
                 <div className="group flex h-24 items-center justify-center overflow-hidden rounded-2xl bg-neutral-200 text-xs text-neutral-500">
                   {item.imageUrl ? (
                     <img
@@ -233,6 +250,15 @@ export default function MentorFeedbackDetailPanel({
         {downloadError && (
           <p className="text-xs font-semibold text-rose-500">{downloadError}</p>
         )}
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold text-neutral-900">멘티 코멘트</h3>
+        <div className="min-h-[88px] rounded-2xl bg-white p-4 text-sm text-neutral-700">
+          {latestSubmission?.comment?.trim()
+            ? latestSubmission.comment
+            : '등록된 코멘트가 없습니다.'}
+        </div>
       </section>
 
       <div className="flex items-center gap-3">

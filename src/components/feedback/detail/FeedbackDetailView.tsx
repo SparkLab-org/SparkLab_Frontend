@@ -8,8 +8,10 @@ import type { Feedback } from '@/src/lib/types/feedback';
 import { readFeedbackPreview, storeFeedbackPreview } from '@/src/lib/utils/feedbackPreview';
 import {
   createFeedbackComment,
+  deleteFeedbackComment,
   listFeedbackComments,
   listFeedbacks,
+  updateFeedbackComment,
 } from '@/src/services/feedback.api';
 import FeedbackDetailHeader from './FeedbackDetailHeader';
 import FeedbackCommentThread from './FeedbackCommentThread';
@@ -41,6 +43,8 @@ export default function FeedbackDetailView({ todoId, role }: Props) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState('');
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const resolvedRole: 'mentee' | 'mentor' =
@@ -138,7 +142,7 @@ export default function FeedbackDetailView({ todoId, role }: Props) {
     setCommentError(null);
     listFeedbackComments(resolvedFeedback.id)
       .then((items) => {
-        const mapped = items.map((item) => ({
+        const mapped: Comment[] = items.map((item) => ({
           id: String(item.feedbackCommentId),
           role: item.type === 'MENTOR_REPLY' ? 'mentor' : 'mentee',
           content: item.content,
@@ -170,6 +174,48 @@ export default function FeedbackDetailView({ todoId, role }: Props) {
       })
       .catch(() => {
         setCommentError('댓글 등록에 실패했습니다.');
+      });
+  };
+
+  const handleEditStart = (comment: Comment) => {
+    setEditingId(comment.id);
+    setEditingValue(comment.content);
+    setCommentError(null);
+  };
+
+  const handleEditCancel = () => {
+    setEditingId(null);
+    setEditingValue('');
+  };
+
+  const handleEditSave = (commentId: string) => {
+    if (!resolvedFeedback?.id) return;
+    const nextContent = editingValue.trim();
+    if (!nextContent) return;
+    updateFeedbackComment(resolvedFeedback.id, commentId, { content: nextContent })
+      .then((updated) => {
+        setComments((prev) =>
+          prev.map((item) =>
+            item.id === commentId ? { ...item, content: updated.content } : item
+          )
+        );
+        handleEditCancel();
+        setCommentError(null);
+      })
+      .catch(() => {
+        setCommentError('댓글 수정에 실패했습니다.');
+      });
+  };
+
+  const handleDelete = (commentId: string) => {
+    if (!resolvedFeedback?.id) return;
+    deleteFeedbackComment(resolvedFeedback.id, commentId)
+      .then(() => {
+        setComments((prev) => prev.filter((item) => item.id !== commentId));
+        setCommentError(null);
+      })
+      .catch(() => {
+        setCommentError('댓글 삭제에 실패했습니다.');
       });
   };
 
@@ -212,7 +258,17 @@ export default function FeedbackDetailView({ todoId, role }: Props) {
             댓글을 불러오는 중...
           </div>
         ) : (
-          <FeedbackCommentThread comments={comments} />
+          <FeedbackCommentThread
+            comments={comments}
+            currentRole={resolvedRole}
+            editingId={editingId}
+            editingValue={editingValue}
+            onEditingChange={setEditingValue}
+            onEditStart={handleEditStart}
+            onEditCancel={handleEditCancel}
+            onEditSave={handleEditSave}
+            onDelete={handleDelete}
+          />
         )}
         {commentError && (
           <p className="text-xs font-semibold text-rose-500">{commentError}</p>

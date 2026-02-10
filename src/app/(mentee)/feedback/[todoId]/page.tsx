@@ -1,5 +1,10 @@
 import FeedbackDetailView from '@/src/components/feedback/detail/FeedbackDetailView';
 
-export default function FeedbackDetailPage({ params }: { params: { todoId: string } }) {
-  return <FeedbackDetailView todoId={params.todoId} />;
+export default async function FeedbackDetailPage({
+  params,
+}: {
+  params: Promise<{ todoId: string }>;
+}) {
+  const { todoId } = await params;
+  return <FeedbackDetailView todoId={todoId} />;
 }

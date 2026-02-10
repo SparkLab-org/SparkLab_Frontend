@@ -480,7 +480,7 @@ async function resolveDailyPlanId(
           ...(accountId ? { accountId } : {}),
         });
       }
-      if (res.dailyPlanId && res.dailyPlanId > 0) {
+      if (res?.dailyPlanId && res.dailyPlanId > 0) {
         writeDailyPlanCache(key, res.dailyPlanId);
         return res.dailyPlanId;
       }
