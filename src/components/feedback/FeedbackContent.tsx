@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTodosQuery } from "@/src/hooks/todoQueries";
 import { useFeedbacksQuery } from "@/src/hooks/feedbackQueries";
-import { useAuthMeQuery } from "@/src/hooks/authQueries";
 import FeedbackHeaderActions from "./FeedbackHeaderActions";
 import FeedbackList from "./FeedbackList";
 import FeedbackSortBar from "./FeedbackSortBar";
@@ -58,15 +57,7 @@ const feedbackReadStore = (() => {
 
 export default function FeedbackContent({ title }: Props) {
   const { data: todos = [] } = useTodosQuery();
-  const { data: me } = useAuthMeQuery();
-  const menteeId = useMemo(() => {
-    if (typeof me?.menteeId === "number") return me.menteeId;
-    if (typeof window === "undefined") return undefined;
-    const raw = window.localStorage.getItem("menteeId");
-    const parsed = raw ? Number(raw) : NaN;
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }, [me?.menteeId]);
-  const { data: feedbacks = [] } = useFeedbacksQuery({ menteeId });
+  const { data: feedbacks = [] } = useFeedbacksQuery();
   const [activeSubject, setActiveSubject] = useState<SubjectFilter>("전체");
   const rawReadIds = useSyncExternalStore(
     feedbackReadStore.subscribe,
@@ -95,17 +86,37 @@ export default function FeedbackContent({ title }: Props) {
       const todo = feedback.todoItemId
         ? todoById.get(String(feedback.todoItemId))
         : undefined;
+      const feedbackSubjectLabel = feedback.subject
+        ? feedback.subject === "KOREAN"
+          ? "국어"
+          : feedback.subject === "ENGLISH"
+          ? "영어"
+          : feedback.subject === "MATH"
+          ? "수학"
+          : "전체"
+        : undefined;
+      const createdAt =
+        feedback.createdAt && !Number.isNaN(Date.parse(feedback.createdAt))
+          ? Date.parse(feedback.createdAt)
+          : typeof todo?.createdAt === "number"
+          ? todo.createdAt
+          : 0;
       return {
         id: feedback.id,
         feedbackId: Number(feedback.id),
         todoItemId: feedback.todoItemId,
-        title: todo?.title ?? feedback.summary ?? "피드백",
-        subject: todo?.subject ?? "국어",
+        title:
+          feedback.title ??
+          feedback.todoTitle ??
+          todo?.title ??
+          feedback.summary ??
+          "피드백",
+        subject: todo?.subject ?? feedbackSubjectLabel ?? "국어",
         feedback: feedback.content ?? feedback.summary ?? "",
         type: todo?.type ?? (todo?.isFixed ? "과제" : "학습"),
         isFixed: todo?.isFixed ?? false,
         status: todo?.status,
-        createdAt: todo?.createdAt ?? Date.now(),
+        createdAt,
       };
     });
     const subjectFiltered =

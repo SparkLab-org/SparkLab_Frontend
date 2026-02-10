@@ -33,28 +33,28 @@ export default function MentorPlannerCalendarSection({
   onSelectDate,
 }: Props) {
   return (
-    <section className="w-full max-w-[768px] rounded-3xl bg-[#F5F5F5] p-6">
+    <section className="w-full max-w-[768px] rounded-3xl bg-white p-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-neutral-900">{headerLabel}</p>
+          <p className="text-xl font-semibold text-neutral-900">{headerLabel}</p>
           <p className="text-xs text-neutral-500">{monthLabel}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onPrevMonth}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-neutral-700 shadow-sm"
+            className="flex h-9 w-9 items-center justify-center text-neutral-600 hover:text-neutral-900"
             aria-label="이전 달"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
           <button
             type="button"
             onClick={onNextMonth}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-neutral-700 shadow-sm"
+            className="flex h-9 w-9 items-center justify-center text-neutral-600 hover:text-neutral-900"
             aria-label="다음 달"
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-5 w-5" />
           </button>
         </div>
       </div>

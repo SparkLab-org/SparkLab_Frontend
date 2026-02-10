@@ -7,6 +7,7 @@ import { ko } from 'date-fns/locale';
 import { useMentorStore } from '@/src/store/mentorStore';
 import { useMentorUiStore } from '@/src/store/mentorUiStore';
 import { useCreateTodoMutation, useTodosRangeQuery } from '@/src/hooks/todoQueries';
+import { useTodoFeedbackStatusQuery } from '@/src/hooks/feedbackQueries';
 import MentorPlannerCalendarSection from '@/src/components/mentor/planner/MentorPlannerCalendarSection';
 import MentorPlannerDayPanel from '@/src/components/mentor/planner/MentorPlannerDayPanel';
 import MentorPlannerMenteeSection from '@/src/components/mentor/planner/MentorPlannerMenteeSection';
@@ -16,6 +17,7 @@ import {
   buildScheduleMap,
   buildScheduleMapFromTodos,
 } from '@/src/components/mentor/planner/mentorPlannerUtils';
+import { resolveNumericId } from '@/src/components/mentor/feedback/mentorFeedbackUtils';
 import type { Todo, TodoSubject } from '@/src/lib/types/planner';
 
 const FALLBACK_DUE_TIME = '23:59';
@@ -27,6 +29,7 @@ function toTodoSubject(value?: string): TodoSubject {
 
 export default function MentorPlannerView() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [panelError, setPanelError] = useState('');
   const mentees = useMentorStore((s) => s.mentees);
   const plannerSelectedDate = useMentorUiStore((s) => s.plannerSelectedDate);
   const plannerActiveMonth = useMentorUiStore((s) => s.plannerActiveMonth);
@@ -67,18 +70,73 @@ export default function MentorPlannerView() {
     () => menteeList.find((mentee) => mentee.id === activeMenteeId),
     [menteeList, activeMenteeId]
   );
+  const selectedMenteeName = selectedMentee?.name ?? '';
+  const activeMenteeNumericId = useMemo(
+    () => resolveNumericId(selectedMentee?.id ?? activeMenteeId),
+    [selectedMentee?.id, activeMenteeId]
+  );
+  const { data: todoStatusList = [] } = useTodoFeedbackStatusQuery({
+    menteeId: activeMenteeNumericId,
+    planDate: selectedDateKey,
+  });
+  const todoStatusTodos = useMemo<Todo[]>(() => {
+    if (todoStatusList.length === 0) return [];
+    const menteeId = selectedMentee?.id ?? activeMenteeId;
+    const menteeName = selectedMentee?.name ?? '';
+    return todoStatusList.map((item) => {
+      const normalizedType = (item.type ?? '').toUpperCase();
+      const isAssignment =
+        normalizedType.includes('ASSIGN') ||
+        normalizedType.includes('HOMEWORK') ||
+        normalizedType.includes('TASK');
+      const subjectLabel =
+        item.subject === 'ENGLISH'
+          ? '영어'
+          : item.subject === 'MATH'
+          ? '수학'
+          : item.subject === 'ALL'
+          ? '국어'
+          : '국어';
+      return {
+        id: String(item.todoItemId),
+        title: item.title ?? '할 일',
+        isFixed: isAssignment,
+        status: item.hasFeedback ? 'DONE' : 'TODO',
+        subject: subjectLabel,
+        type: isAssignment ? '과제' : '학습',
+        feedback: item.hasFeedback ? '등록됨' : null,
+        goal: null,
+        assigneeId: menteeId ?? null,
+        assigneeName: menteeName ?? null,
+        guideFileName: null,
+        guideFileUrl: null,
+        studySeconds: 0,
+        createdAt: new Date(`${selectedDateKey}T00:00:00`).getTime(),
+        dueDate: item.targetDate ?? selectedDateKey,
+        dueTime: FALLBACK_DUE_TIME,
+      };
+    });
+  }, [todoStatusList, selectedDateKey, selectedMentee, activeMenteeId]);
 
   const dayTodos = useMemo(() => {
-    const hasAssignee = todos.some((todo) => String(todo.assigneeId ?? '').length > 0);
     const filtered = todos.filter((todo) => {
       if (!todo.dueDate) return false;
       if (todo.dueDate !== selectedDateKey) return false;
       if (!activeMenteeId) return true;
+      const id = String(todo.assigneeId ?? '');
+      const name = String(todo.assigneeName ?? '');
+      const hasAssignee = Boolean(id || name);
       if (!hasAssignee) return true;
-      return String(todo.assigneeId ?? '') === String(activeMenteeId);
+      const byId = id === String(activeMenteeId);
+      const byName =
+        selectedMenteeName.length > 0 ? name === selectedMenteeName : false;
+      return byId || byName;
     });
     if (filtered.length > 0) {
       return [...filtered].sort((a, b) => a.dueTime.localeCompare(b.dueTime));
+    }
+    if (todoStatusTodos.length > 0) {
+      return [...todoStatusTodos].sort((a, b) => a.dueTime.localeCompare(b.dueTime));
     }
     if (!selectedMentee) return [];
     const createdAt = new Date(`${selectedDateKey}T00:00:00`).getTime();
@@ -100,29 +158,50 @@ export default function MentorPlannerView() {
       dueDate: selectedDateKey,
       dueTime: FALLBACK_DUE_TIME,
     }));
-  }, [todos, selectedDateKey, activeMenteeId, selectedMentee]);
-
-  const submittedAssignments = useMemo(
-    () =>
-      dayTodos.filter((todo) => todo.type === '과제' && todo.status === 'DONE'),
-    [dayTodos]
-  );
+  }, [
+    todos,
+    selectedDateKey,
+    activeMenteeId,
+    selectedMentee,
+    selectedMenteeName,
+    todoStatusTodos,
+  ]);
 
   const scheduleByDate = useMemo(() => {
-    const hasAssignee = todos.some((todo) => String(todo.assigneeId ?? '').length > 0);
-    const filteredTodos =
-      activeMenteeId && hasAssignee
-        ? todos.filter((todo) => String(todo.assigneeId ?? '') === String(activeMenteeId))
-        : todos;
-    const todosForSchedule = filteredTodos.length > 0 ? filteredTodos : todos;
-    if (todosForSchedule.length > 0) {
-      return buildScheduleMapFromTodos(todosForSchedule);
+    const menteeIdKey = activeMenteeId ? String(activeMenteeId) : '';
+    const menteeNameKey = selectedMenteeName ? String(selectedMenteeName) : '';
+    const shouldFilterByMentee = Boolean(menteeIdKey || menteeNameKey);
+    const filteredTodos = shouldFilterByMentee
+      ? todos.filter((todo) => {
+          const id = String(todo.assigneeId ?? '');
+          const name = String(todo.assigneeName ?? '');
+          if (!id && !name) return true;
+          if (menteeIdKey && id === menteeIdKey) return true;
+          if (menteeNameKey && name === menteeNameKey) return true;
+          if (menteeNameKey && id === menteeNameKey) return true;
+          if (menteeIdKey && name === menteeIdKey) return true;
+          return false;
+        })
+      : todos;
+
+    if (filteredTodos.length > 0) {
+      return buildScheduleMapFromTodos(filteredTodos);
+    }
+    if (todoStatusTodos.length > 0) {
+      return buildScheduleMapFromTodos(todoStatusTodos);
     }
     const base = activeMenteeId
       ? menteeList.filter((mentee) => mentee.id === activeMenteeId)
       : menteeList;
     return buildScheduleMap(base, activeMonth);
-  }, [activeMonth, menteeList, activeMenteeId, todos]);
+  }, [
+    activeMonth,
+    menteeList,
+    activeMenteeId,
+    selectedMenteeName,
+    todos,
+    todoStatusTodos,
+  ]);
 
   const headerLabel = useMemo(
     () => format(selectedDate, 'M월 d일(EEE)', { locale: ko }),
@@ -162,18 +241,26 @@ export default function MentorPlannerView() {
     guideFileName?: string;
   }) => {
     if (!activeMenteeId) return;
-    createTodo({
-      title: input.title,
-      subject: input.subject,
-      dueDate: selectedDateKey,
-      dueTime: input.dueTime,
-      type: '과제',
-      isFixed: true,
-      goal: input.goal,
-      guideFileName: input.guideFileName,
-      assigneeId: activeMenteeId,
-      assigneeName: selectedMentee?.name,
-    });
+    setPanelError('');
+    createTodo(
+      {
+        title: input.title,
+        subject: input.subject,
+        dueDate: selectedDateKey,
+        dueTime: input.dueTime,
+        type: '과제',
+        isFixed: true,
+        goal: input.goal,
+        guideFileName: input.guideFileName,
+        assigneeId: activeMenteeId,
+        assigneeName: selectedMentee?.name,
+      },
+      {
+        onError: () => {
+          setPanelError('과제 추가에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        },
+      }
+    );
   };
 
   return (
@@ -207,11 +294,12 @@ export default function MentorPlannerView() {
         isOpen={isPanelOpen}
         dateLabel={headerLabel}
         menteeName={selectedMentee?.name}
+        menteeId={selectedMentee?.id ?? activeMenteeId}
         dayTodos={dayTodos}
-        submittedAssignments={submittedAssignments}
         onClose={() => setIsPanelOpen(false)}
         onCreateAssignment={handleCreateAssignment}
         isCreating={isCreating}
+        errorMessage={panelError}
       />
     </div>
   );

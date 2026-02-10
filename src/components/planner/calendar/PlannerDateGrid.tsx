@@ -65,7 +65,7 @@ export default function PlannerDateGrid({
         const containerClassName = [
           view === 'month'
             ? 'relative flex min-h-[96px] flex-col items-start gap-1 rounded-2xl px-2 py-2 text-left'
-            : 'relative flex h-10 items-center justify-center rounded-full',
+            : 'relative flex h-10 items-center justify-center rounded-lg',
           view === 'month'
             ? inMonth
               ? 'text-neutral-900'
@@ -73,8 +73,8 @@ export default function PlannerDateGrid({
             : isSelected
             ? 'bg-[#004DFF] text-white'
             : inMonth
-            ? 'bg-neutral-100 text-neutral-800'
-            : 'bg-neutral-50 text-neutral-300',
+            ? 'bg-transparent text-neutral-800'
+            : 'bg-transparent text-neutral-300',
         ].join(' ');
 
         const cellContent = (
@@ -82,12 +82,12 @@ export default function PlannerDateGrid({
             {view === 'month' ? (
               <span
                 className={[
-                  'flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold',
+                  'flex h-6 w-6 items-center justify-center rounded-lg text-xs font-semibold',
                   isSelected
                     ? 'bg-[#004DFF] text-white'
                     : inMonth
-                    ? 'bg-neutral-100 text-neutral-800'
-                    : 'bg-neutral-50 text-neutral-300',
+                    ? 'bg-transparent text-neutral-800'
+                    : 'bg-transparent text-neutral-300',
                 ].join(' ')}
               >
                 {d.getDate()}

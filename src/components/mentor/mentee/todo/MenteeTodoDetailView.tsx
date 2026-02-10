@@ -5,7 +5,13 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
 import { useMentorStore } from '@/src/store/mentorStore';
-import { useTodosQuery, useUpdateTodoMutation } from '@/src/hooks/todoQueries';
+import { useTodosQuery } from '@/src/hooks/todoQueries';
+import { useAuthMeQuery } from '@/src/hooks/authQueries';
+import {
+  useCreateFeedbackMutation,
+  useFeedbacksQuery,
+  useUpdateFeedbackMutation,
+} from '@/src/hooks/feedbackQueries';
 import { isOverdueTask } from '@/src/lib/utils/todoStatus';
 import type { Todo } from '@/src/lib/types/planner';
 
@@ -49,17 +55,81 @@ export default function MenteeTodoDetailView() {
   }, [resolvedMenteeId, setSelectedId]);
 
   const { data: todos = [] } = useTodosQuery();
-  const updateTodoMutation = useUpdateTodoMutation();
+  const { data: me } = useAuthMeQuery();
+  const createFeedbackMutation = useCreateFeedbackMutation();
+  const updateFeedbackMutation = useUpdateFeedbackMutation();
   const todo = useMemo(() => todos.find((item) => item.id === todoId), [todos, todoId]);
 
   const [draft, setDraft] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const todoItemId = Number(todo?.id ?? todoId);
+  const { data: feedbacks = [] } = useFeedbacksQuery({
+    todoItemId: Number.isFinite(todoItemId) ? todoItemId : undefined,
+  });
+  const existingFeedback = feedbacks[0];
   useEffect(() => {
+    if (existingFeedback?.content) {
+      setDraft(existingFeedback.content);
+      return;
+    }
+    if (typeof window !== 'undefined' && todo?.id) {
+      const cached = window.localStorage.getItem(`todoFeedback:${todo.id}`);
+      if (cached !== null) {
+        setDraft(cached);
+        return;
+      }
+    }
     setDraft(todo?.feedback ?? '');
-  }, [todo?.feedback, todo?.id]);
+  }, [todo?.feedback, todo?.id, existingFeedback?.content]);
+
+  const handleSaveFeedback = async () => {
+    if (!todo) return;
+    setSaveError(null);
+    setSaveSuccess(false);
+    const mentorId = typeof me?.mentorId === 'number' ? me.mentorId : undefined;
+    const menteeIdNum = Number.isFinite(Number(menteeId)) ? Number(menteeId) : undefined;
+    const canUseApi =
+      typeof mentorId === 'number' &&
+      typeof menteeIdNum === 'number' &&
+      Number.isFinite(todoItemId);
+
+    try {
+      if (canUseApi) {
+        if (existingFeedback?.id) {
+          await updateFeedbackMutation.mutateAsync({
+            id: existingFeedback.id,
+            patch: {
+              title: todo.title,
+              summary: todo.title,
+              content: draft.trim(),
+              todoItemId,
+              targetDate: todo.dueDate,
+            },
+          });
+        } else {
+          await createFeedbackMutation.mutateAsync({
+            mentorId,
+            menteeId: menteeIdNum,
+            todoItemId,
+            targetDate: todo.dueDate,
+            title: todo.title,
+            summary: todo.title,
+            content: draft.trim(),
+          });
+        }
+      } else if (typeof window !== 'undefined') {
+        window.localStorage.setItem(`todoFeedback:${todo.id}`, draft.trim());
+      }
+      setSaveSuccess(true);
+    } catch {
+      setSaveError('피드백 저장에 실패했습니다.');
+    }
+  };
 
   if (!todo) {
     return (
-      <div className="rounded-3xl bg-[#F5F5F5] p-6">
+      <div className="rounded-3xl bg-white p-6">
         <Link
           href={`/mentor/mentee/${resolvedMenteeId}`}
           className="text-xs text-neutral-500 hover:text-neutral-900"
@@ -75,7 +145,7 @@ export default function MenteeTodoDetailView() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl bg-[#F5F5F5] p-6">
+      <section className="rounded-3xl bg-white p-6">
         <Link
           href={`/mentor/mentee/${resolvedMenteeId}`}
           className="text-xs text-neutral-500 hover:text-neutral-900"
@@ -95,7 +165,7 @@ export default function MenteeTodoDetailView() {
         </div>
       </section>
 
-      <section className="rounded-3xl bg-[#F5F5F5] p-6">
+      <section className="rounded-3xl bg-white p-6">
         <h2 className="text-base font-semibold text-neutral-900 lg:text-lg">과제 정보</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <div className="rounded-2xl bg-white p-4">
@@ -125,14 +195,14 @@ export default function MenteeTodoDetailView() {
         </div>
       </section>
 
-      <section className="rounded-3xl bg-[#F5F5F5] p-6">
+      <section className="rounded-3xl bg-white p-6">
         <h2 className="text-base font-semibold text-neutral-900 lg:text-lg">멘티 제출물</h2>
         <div className="mt-4 rounded-2xl bg-white px-4 py-6 text-center text-sm text-neutral-500">
           제출 파일이 아직 없습니다.
         </div>
       </section>
 
-      <section className="rounded-3xl bg-[#F5F5F5] p-6">
+      <section className="rounded-3xl bg-white p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-neutral-900 lg:text-lg">멘토 피드백</h2>
           <span className="text-xs text-neutral-500">멘티에게 전달될 내용</span>
@@ -147,18 +217,26 @@ export default function MenteeTodoDetailView() {
         <div className="mt-4 flex justify-end">
           <button
             type="button"
-            onClick={() => updateTodoMutation.mutate({ id: todo.id, patch: { feedback: draft } })}
-            disabled={updateTodoMutation.isPending}
+            onClick={handleSaveFeedback}
+            disabled={createFeedbackMutation.isPending || updateFeedbackMutation.isPending}
             className={[
               'rounded-xl px-4 py-2 text-xs font-semibold',
-              updateTodoMutation.isPending
+              createFeedbackMutation.isPending || updateFeedbackMutation.isPending
                 ? 'cursor-not-allowed bg-neutral-300 text-neutral-500'
                 : 'bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] text-white',
             ].join(' ')}
           >
-            {updateTodoMutation.isPending ? '저장 중...' : '피드백 저장'}
+            {createFeedbackMutation.isPending || updateFeedbackMutation.isPending
+              ? '저장 중...'
+              : '피드백 저장'}
           </button>
         </div>
+        {saveSuccess && (
+          <p className="mt-3 text-xs font-semibold text-emerald-600">피드백이 저장되었습니다.</p>
+        )}
+        {saveError && (
+          <p className="mt-3 text-xs font-semibold text-rose-500">{saveError}</p>
+        )}
       </section>
     </div>
   );

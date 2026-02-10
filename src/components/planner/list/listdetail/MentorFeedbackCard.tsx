@@ -14,7 +14,7 @@ export default function MentorFeedbackCard({ feedback, todoId }: Props) {
       : '아직 피드백이 등록되지 않았습니다.';
 
   return (
-    <section className="rounded-2xl bg-[#F5F5F5] p-4">
+    <section className="rounded-2xl bg-[#F6F8FA] p-5">
       <div className="flex items-center justify-between">
         <p className="text-lg font-semibold text-neutral-900">멘토 피드백</p>
         {todoId && (

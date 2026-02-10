@@ -3,8 +3,12 @@ export type Feedback = {
   mentorId?: number;
   menteeId?: number;
   todoItemId?: number;
+  todoTitle?: string;
+  subject?: 'KOREAN' | 'ENGLISH' | 'MATH' | 'ALL';
+  title?: string;
   targetDate?: string;
   isImportant?: boolean;
+  isBookmarked?: boolean;
   summary?: string;
   content?: string;
   createdAt?: string;

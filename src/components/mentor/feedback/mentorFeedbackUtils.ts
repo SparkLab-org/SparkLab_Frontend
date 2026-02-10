@@ -43,7 +43,15 @@ export function toTodoSubject(value?: string): TodoSubject {
 export function resolveNumericId(value?: string | number | null) {
   if (value === null || value === undefined) return undefined;
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  if (Number.isFinite(parsed)) return parsed;
+  if (typeof value === 'string') {
+    const match = value.match(/\d+/);
+    if (match) {
+      const extracted = Number(match[0]);
+      return Number.isFinite(extracted) ? extracted : undefined;
+    }
+  }
+  return undefined;
 }
 
 export function resolveTodoItemId(todo?: Todo | null) {

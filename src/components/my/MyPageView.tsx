@@ -6,17 +6,15 @@ import { format } from 'date-fns';
 import { useTodosQuery } from '@/src/hooks/todoQueries';
 import { useAuthStore } from '@/src/store/authStore';
 import MyAccountActions from './MyAccountActions';
-import MyAchievementCard, { type MyAchievementTab } from './MyAchievementCard';
+import MyAchievementCard from './MyAchievementCard';
 import MyHeader from './MyHeader';
 import MyHelpButton from './MyHelpButton';
 import MyProfileCard from './MyProfileCard';
-import MySettingsList from './MySettingsList';
 import MenteeLevelInfoModal from './MenteeLevelInfoModal';
 
 export default function MyPageView() {
   const logout = useAuthStore((s) => s.logout);
   const { data: todos = [] } = useTodosQuery();
-  const [activeTab, setActiveTab] = useState<MyAchievementTab>('routine');
   const [accountId, setAccountId] = useState('OOO');
   const [activeLevel, setActiveLevel] = useState<'NORMAL' | 'WARNING' | 'DANGER'>('NORMAL');
   const [isLevelInfoOpen, setIsLevelInfoOpen] = useState(false);
@@ -38,10 +36,6 @@ export default function MyPageView() {
       ),
     [todos]
   );
-
-  const handleWithdraw = () => {
-    window.alert('준비중이에요.');
-  };
 
   const handleHelp = () => {
     window.alert('준비중이에요.');
@@ -73,11 +67,8 @@ export default function MyPageView() {
         monthPercent={monthPercent}
         monthDoneCount={monthDoneCount}
         monthTotalCount={monthTotalCount}
-        activeTab={activeTab}
-        onChangeTab={setActiveTab}
       />
-      <MySettingsList />
-      <MyAccountActions onLogout={logout} onWithdraw={handleWithdraw} />
+      <MyAccountActions onLogout={logout} />
       <MyHelpButton onClick={handleHelp} />
       {isLevelInfoOpen && <MenteeLevelInfoModal onClose={() => setIsLevelInfoOpen(false)} />}
     </div>

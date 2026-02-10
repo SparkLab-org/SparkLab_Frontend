@@ -1,9 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { Question } from '@/src/lib/types/question';
-import type { CreateQuestionInput, UpdateQuestionInput } from '@/src/services/question.api';
+import type {
+  CreateQuestionInput,
+  CreateQuestionReplyInput,
+  UpdateQuestionInput,
+} from '@/src/services/question.api';
 import {
   createQuestion,
+  createQuestionReply,
   deleteQuestion,
   getQuestionSnapshot,
   listQuestions,
@@ -59,6 +64,28 @@ export function useDeleteQuestionMutation() {
     onSuccess: (_, id) => {
       queryClient.setQueryData<Question[]>(questionQueryKeys.all, (prev) =>
         (prev ?? []).filter((item) => item.id !== id)
+      );
+    },
+  });
+}
+
+export function useCreateQuestionReplyMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateQuestionReplyInput) => createQuestionReply(input),
+    onSuccess: (_, input) => {
+      queryClient.setQueryData<Question[]>(questionQueryKeys.all, (prev) =>
+        (prev ?? []).map((item) =>
+          item.id === String(input.questionId)
+            ? {
+                ...item,
+                answer: input.content,
+                status: '완료',
+                updatedAt: Date.now(),
+              }
+            : item
+        )
       );
     },
   });

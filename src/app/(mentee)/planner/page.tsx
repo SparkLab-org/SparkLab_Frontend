@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BellIcon } from "lucide-react";
+import bellIcon from "@/src/assets/icons/bell.svg";
 import GreetingCard from "@/src/components/planner/landing/greetingCard";
 import WeeklyCalendar from "@/src/components/planner/landing/WeeklyCalendar";
 import TodayTodoSummary from "@/src/components/planner/landing/TodayTodoSummary";
@@ -15,13 +15,16 @@ export default function PlannerPage() {
           aria-label="알림"
           className="inline-flex h-9 w-9 items-center justify-center rounded-full text-neutral-600 transition hover:text-neutral-900"
         >
-          <BellIcon className="h-5 w-5" />
+          {typeof bellIcon === "string" ? (
+            <img className="h-5 w-5" src={bellIcon} alt="" aria-hidden />
+          ) : (
+            <img className="h-5 w-5" src={bellIcon?.src} alt="" aria-hidden />
+          )}
         </Link>
       </div>
       <GreetingCard />
       <WeeklyCalendar />
       <TodayTodoSummary />
-      <YesterdayFeedbackSummary />
     </div>
   );
 }

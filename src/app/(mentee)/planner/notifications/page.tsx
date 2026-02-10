@@ -9,13 +9,13 @@ import NotificationLoginHint from '@/src/components/planner/notifications/Notifi
 const READ_STORAGE_KEY = 'notification-read';
 
 export default function NotificationsPage() {
-  const accountId = useMemo(() => {
-    if (typeof window === 'undefined') return undefined;
-    const raw = window.localStorage.getItem('accountId');
-    return raw && raw.trim().length > 0 ? raw : undefined;
+  const hasToken = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const token = window.localStorage.getItem('accessToken');
+    return Boolean(token);
   }, []);
 
-  const { data: notifications = [] } = useNotificationsQuery(accountId);
+  const { data: notifications = [] } = useNotificationsQuery(hasToken);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export default function NotificationsPage() {
     persistRead(next);
   };
 
-  if (!accountId) {
+  if (!hasToken) {
     return (
       <section className="space-y-3">
         <NotificationLoginHint />

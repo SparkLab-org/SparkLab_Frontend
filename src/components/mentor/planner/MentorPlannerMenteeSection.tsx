@@ -22,31 +22,45 @@ export default function MentorPlannerMenteeSection({
 }: Props) {
   const cardsRef = useRef<HTMLDivElement>(null);
 
-  const scrollCards = (direction: 'left' | 'right') => {
+  const scrollToIndex = (index: number) => {
     const container = cardsRef.current;
     if (!container) return;
-    const amount = Math.max(240, container.clientWidth * 0.65);
-    container.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+    const target = container.children.item(index) as HTMLElement | null;
+    if (!target) return;
+    const left = Math.max(0, target.offsetLeft - 16);
+    container.scrollTo({ left, behavior: 'smooth' });
   };
 
   const activeIndex = menteeCards.findIndex((item) => item.id === activeMenteeId);
+  const handleMove = (direction: 'left' | 'right') => {
+    if (menteeCards.length === 0) return;
+    const baseIndex = activeIndex >= 0 ? activeIndex : 0;
+    const nextIndex =
+      direction === 'left'
+        ? Math.max(0, baseIndex - 1)
+        : Math.min(menteeCards.length - 1, baseIndex + 1);
+    const next = menteeCards[nextIndex];
+    if (!next) return;
+    onSelectMentee(next.id);
+    scrollToIndex(nextIndex);
+  };
 
   return (
-    <section className="rounded-3xl bg-white">
+    <section className="rounded-3xl bg-[#F6F8FA]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => scrollCards('left')}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-neutral-700 shadow-sm"
+            onClick={() => handleMove('left')}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F6F8FA] text-neutral-600"
             aria-label="이전 멘티"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             type="button"
-            onClick={() => scrollCards('right')}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-neutral-700 shadow-sm"
+            onClick={() => handleMove('right')}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F6F8FA] text-neutral-600"
             aria-label="다음 멘티"
           >
             <ChevronRight className="h-4 w-4" />
@@ -59,7 +73,7 @@ export default function MentorPlannerMenteeSection({
         className="mt-2 flex gap-4 overflow-x-auto overflow-y-visible px-4 pb-2 pt-2 scroll-px-4"
       >
         {menteeCards.length === 0 && (
-          <div className="rounded-2xl bg-[#F5F5F5] px-6 py-5 text-sm text-neutral-500">
+          <div className="rounded-2xl bg-white px-6 py-5 text-sm text-neutral-500">
             등록된 멘티가 없습니다.
           </div>
         )}
@@ -73,7 +87,7 @@ export default function MentorPlannerMenteeSection({
               type="button"
               onClick={() => onSelectMentee(mentee.id)}
               className={[
-                'min-w-[240px] rounded-2xl bg-[#F5F5F5] p-4 text-left shadow-sm transition-all duration-300 origin-center will-change-transform',
+                'min-w-[240px] rounded-2xl bg-white p-4 text-left shadow-sm transition-all duration-300 origin-center will-change-transform',
                 isSelected
                   ? 'scale-[1.05] ring-2 ring-[#0528F3]/30 shadow-md'
                   : 'hover:opacity-85',
@@ -83,7 +97,12 @@ export default function MentorPlannerMenteeSection({
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-200">
-                    <User className="h-5 w-5 text-neutral-500" aria-hidden />
+                    <User
+                      className="h-5 w-5 text-neutral-500"
+                      fill="currentColor"
+                      stroke="none"
+                      aria-hidden
+                    />
                   </span>
                   <div>
                     <p className="text-sm font-semibold text-neutral-900">{mentee.name}</p>
@@ -111,16 +130,10 @@ export default function MentorPlannerMenteeSection({
                 ))}
               </div>
 
-              <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-[#F5F5F5] p-3 text-center text-[11px]">
+              <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-[#F6F8FA] p-3 text-center text-[11px]">
                 <div>
                   <p className="text-neutral-500">목표 달성률</p>
                   <p className="mt-1 font-semibold text-neutral-900">{mentee.goalRate}%</p>
-                </div>
-                <div>
-                  <p className="text-neutral-500">약점 유형</p>
-                  <p className="mt-1 font-semibold text-neutral-900">
-                    {mentee.weaknessType ?? '미정'}
-                  </p>
                 </div>
                 <div>
                   <p className="text-neutral-500">오늘 할 일</p>

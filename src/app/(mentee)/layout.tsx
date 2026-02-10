@@ -95,6 +95,7 @@ export default function MenteeLayout({ children }: { children: React.ReactNode }
   const router = useRouter();
   const pathname = usePathname();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isPlannerOrMy = pathname === '/planner' || pathname === '/my';
   const role = useMemo(() => {
     if (typeof window === 'undefined') return null;
     const stored = window.localStorage.getItem('role');
@@ -108,8 +109,15 @@ export default function MenteeLayout({ children }: { children: React.ReactNode }
     }
   }, [isAuthenticated, role, router, pathname]);
 
+  const layoutBgClass = isPlannerOrMy ? 'bg-[#F6F8FA]' : 'bg-white';
+
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-full lg:max-w-none xl:max-w-6xl flex-col bg-white text-neutral-900">
+    <div
+      className={[
+        'mx-auto flex min-h-screen w-full max-w-full flex-col text-neutral-900 lg:max-w-none xl:max-w-6xl',
+        layoutBgClass,
+      ].join(' ')}
+    >
       <main className="flex-1 px-4 pb-16 pt-6 sm:px-6 lg:px-10">{children}</main>
 
       <TimerFloatingWidget />

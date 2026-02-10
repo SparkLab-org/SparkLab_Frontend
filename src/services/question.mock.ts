@@ -27,6 +27,7 @@ const seedQuestions: Question[] = [
     content:
       '내적 공식이 cos이 들어가는지 이해가 잘 안돼요. 벡터를 곱할 때 의미가 뭔지, 각도와의 연결이 궁금해요.',
     answer: null,
+    menteeId: 'm1',
     createdAt: now - 1000 * 60 * 60 * 3,
   },
   {
@@ -38,6 +39,7 @@ const seedQuestions: Question[] = [
       '문장 구조를 파악하는 데 시간이 많이 걸립니다. 시간을 줄일 수 있는 팁이 있을까요?',
     answer:
       '핵심 동사와 주어를 먼저 표시하고, 수식어는 뒤에 정리해보세요. 매일 2~3문장씩 구조 분석 연습을 꾸준히 하면 속도가 확실히 올라갑니다.',
+    menteeId: 'm2',
     createdAt: now - 1000 * 60 * 60 * 12,
   },
   {
@@ -48,6 +50,7 @@ const seedQuestions: Question[] = [
     content:
       '요약을 해도 시험에 필요한 포인트가 잘 안 잡히는 것 같아요. 어떤 기준으로 정리해야 할까요?',
     answer: null,
+    menteeId: 'm3',
     createdAt: now - 1000 * 60 * 60 * 24,
   },
 ];
@@ -111,4 +114,24 @@ export async function updateQuestion(id: string, patch: UpdateQuestionInput): Pr
 export async function deleteQuestion(id: string): Promise<void> {
   mockQuestions = mockQuestions.filter((q) => q.id !== id);
   saveToStorage(mockQuestions);
+}
+
+export async function createQuestionReply(
+  questionId: string | number,
+  content: string
+): Promise<{ replyId: number; content: string; createdAt: number }> {
+  const id = String(questionId);
+  const idx = mockQuestions.findIndex((q) => q.id === id);
+  if (idx < 0) {
+    throw new Error('Question not found');
+  }
+  const updated = {
+    ...mockQuestions[idx],
+    answer: content,
+    status: '완료' as const,
+    updatedAt: Date.now(),
+  };
+  mockQuestions = [...mockQuestions.slice(0, idx), updated, ...mockQuestions.slice(idx + 1)];
+  saveToStorage(mockQuestions);
+  return { replyId: Date.now(), content, createdAt: Date.now() };
 }

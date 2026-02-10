@@ -10,7 +10,7 @@ type Props = {
 
 export default function MentorQuestionPanel({ pendingCount, recentQuestions }: Props) {
   return (
-    <section className="rounded-3xl bg-[#F5F5F5] p-5">
+    <section className="rounded-3xl bg-white p-5">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-base font-semibold text-neutral-900 lg:text-lg">질문 현황</p>

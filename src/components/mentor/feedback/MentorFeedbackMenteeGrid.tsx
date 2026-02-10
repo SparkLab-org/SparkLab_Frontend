@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, User } from 'lucide-react';
 
 import type { MenteeCard } from '@/src/components/mentor/feedback/mentorFeedbackTypes';
 
@@ -17,11 +17,18 @@ export default function MentorFeedbackMenteeGrid({ menteeCards, onSelectMentee }
           key={mentee.id}
           type="button"
           onClick={() => onSelectMentee(mentee.id)}
-          className="min-w-[260px] rounded-3xl bg-[#F5F5F5] p-4 text-left transition hover:bg-[#EFEFEF]"
+          className="min-w-[260px] rounded-3xl bg-white p-4 text-left transition hover:bg-[#EFEFEF]"
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-neutral-300" />
+          <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-300">
+                <User
+                  className="h-6 w-6 text-neutral-500"
+                  fill="currentColor"
+                  stroke="none"
+                  aria-hidden
+                />
+              </div>
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-neutral-900">{mentee.name}</p>
@@ -41,18 +48,12 @@ export default function MentorFeedbackMenteeGrid({ menteeCards, onSelectMentee }
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-neutral-900">학습</span>
-                <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500">
-                  {mentee.studySubject}
-                </span>
               </div>
               <span className="text-neutral-400">{mentee.studyCount}개</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-neutral-900">과제</span>
-                <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500">
-                  {mentee.assignmentSubject}
-                </span>
               </div>
               <span className="text-neutral-400">{mentee.assignmentCount}개</span>
             </div>
@@ -60,7 +61,7 @@ export default function MentorFeedbackMenteeGrid({ menteeCards, onSelectMentee }
         </button>
       ))}
       {menteeCards.length === 0 && (
-        <div className="min-w-[260px] rounded-3xl bg-[#F5F5F5] px-4 py-6 text-sm text-neutral-500">
+        <div className="min-w-[260px] rounded-3xl bg-white px-4 py-6 text-sm text-neutral-500">
           등록된 멘티가 없습니다.
         </div>
       )}

@@ -4,9 +4,10 @@ type Props = {
 };
 
 export default function QuestionAlertCard({
-  message = 'ㅇㅇㅇ 질문에 답변이 왔어요',
+  message,
   time = '13:16',
 }: Props) {
+  if (!message) return null;
   return (
     <section className="space-y-4 rounded-3xl bg-neutral-100 p-5 ">
       <div className="flex items-end justify-between gap-3">

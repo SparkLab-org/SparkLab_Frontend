@@ -2,11 +2,16 @@
 
 import { useMemo, useState } from 'react';
 
+import { addDays, format, subDays } from 'date-fns';
+
 import { useMentorStore } from '@/src/store/mentorStore';
-import { useTodosQuery } from '@/src/hooks/todoQueries';
+import { useMentorUiStore } from '@/src/store/mentorUiStore';
+import { useTodosRangeQuery } from '@/src/hooks/todoQueries';
 import {
   useCreateFeedbackMutation,
   useFeedbacksQuery,
+  useTodoFeedbackStatusQuery,
+  useTodoFeedbackStatusRangeQuery,
   useUpdateFeedbackMutation,
 } from '@/src/hooks/feedbackQueries';
 import { useAuthMeQuery } from '@/src/hooks/authQueries';
@@ -31,12 +36,18 @@ import {
 } from '@/src/components/mentor/feedback/mentorFeedbackUtils';
 
 export default function MentorFeedbackView() {
-  const { data: todos = [] } = useTodosQuery();
+  const rangeDates = useMemo(() => {
+    const today = new Date();
+    const start = subDays(today, 6);
+    return Array.from({ length: 7 }, (_, i) =>
+      format(addDays(start, i), 'yyyy-MM-dd')
+    );
+  }, []);
+  const { data: todos = [] } = useTodosRangeQuery(rangeDates);
   const { data: me } = useAuthMeQuery();
-  const { data: feedbacks = [] } = useFeedbacksQuery({
-    mentorId: typeof me?.mentorId === 'number' ? me.mentorId : undefined,
-  });
+  const { data: feedbacks = [] } = useFeedbacksQuery();
   const mentees = useMentorStore((s) => s.mentees);
+  const selectedDateKey = useMentorUiStore((s) => s.plannerSelectedDate);
 
   const [selectedMenteeId, setSelectedMenteeId] = useState<string | null>(null);
   const [selectedTodoId, setSelectedTodoId] = useState('');
@@ -137,6 +148,15 @@ export default function MentorFeedbackView() {
       ),
     [mentees, activeMenteeId, activeMenteeCard]
   );
+  const activeMenteeNumericId = resolveNumericId(activeMenteeMeta?.id ?? activeMenteeId);
+  const { data: todoStatusList = [] } = useTodoFeedbackStatusQuery({
+    menteeId: activeMenteeNumericId,
+    planDate: selectedDateKey,
+  });
+  const { data: todoStatusRange = [] } = useTodoFeedbackStatusRangeQuery({
+    menteeId: activeMenteeNumericId,
+    dates: rangeDates,
+  });
 
   const menteeTodos = useMemo(() => {
     if (!activeMenteeId) return [];
@@ -172,7 +192,59 @@ export default function MentorFeedbackView() {
     }));
   }, [activeMenteeMeta]);
 
-  const displayTodos = menteeTodos.length > 0 ? menteeTodos : fallbackTodos;
+  const todoStatusTodos = useMemo<Todo[]>(() => {
+    const source =
+      todoStatusRange.length > 0 ? todoStatusRange : todoStatusList;
+    if (source.length === 0) return [];
+    const menteeId = activeMenteeMeta?.id ?? activeMenteeId;
+    const menteeName = activeMenteeMeta?.name ?? activeMenteeCard?.name ?? '';
+    return source.map((item) => {
+      const normalizedType = (item.type ?? '').toUpperCase();
+      const isAssignment =
+        normalizedType.includes('ASSIGN') ||
+        normalizedType.includes('HOMEWORK') ||
+        normalizedType.includes('TASK');
+      const subjectLabel =
+        item.subject === 'ENGLISH'
+          ? '영어'
+          : item.subject === 'MATH'
+          ? '수학'
+          : item.subject === 'ALL'
+          ? '국어'
+          : '국어';
+      return {
+        id: String(item.todoItemId),
+        title: item.title ?? '할 일',
+        isFixed: isAssignment,
+        status: 'DONE',
+        subject: subjectLabel,
+        type: isAssignment ? '과제' : '학습',
+        feedback: item.hasFeedback ? '등록됨' : null,
+        goal: null,
+        assigneeId: menteeId ?? null,
+        assigneeName: menteeName ?? null,
+        guideFileName: null,
+        guideFileUrl: null,
+        studySeconds: 0,
+        createdAt: FALLBACK_CREATED_AT,
+        dueDate: item.targetDate ?? '',
+        dueTime: '23:59',
+      };
+    });
+  }, [
+    todoStatusList,
+    todoStatusRange,
+    activeMenteeMeta,
+    activeMenteeId,
+    activeMenteeCard,
+  ]);
+
+  const displayTodos =
+    menteeTodos.length > 0
+      ? menteeTodos
+      : todoStatusTodos.length > 0
+      ? todoStatusTodos
+      : fallbackTodos;
 
   const filterByType = (list: Todo[]) => {
     if (activeType === '전체') return list;
@@ -185,7 +257,9 @@ export default function MentorFeedbackView() {
     )
   );
   const completedTodos = filterByType(
-    displayTodos.filter((todo) => hasFeedbackForTodo(todo, feedbackByTodoId))
+    displayTodos.filter(
+      (todo) => todo.status === 'DONE' && hasFeedbackForTodo(todo, feedbackByTodoId)
+    )
   );
 
   const todoCandidates = [...pendingTodos, ...completedTodos];
@@ -205,10 +279,15 @@ export default function MentorFeedbackView() {
   const feedbackText =
     selectedFeedback?.content?.trim() ||
     selectedFeedback?.summary?.trim() ||
-    selectedTodo?.feedback ||
+    selectedFeedback?.title?.trim() ||
+    (selectedTodo?.feedback && selectedTodo.feedback !== '등록됨'
+      ? selectedTodo.feedback
+      : '') ||
     '';
 
-  const mentorId = me?.mentorId;
+  const mentorId = resolveNumericId(
+    typeof me?.mentorId === 'number' ? me.mentorId : (me?.accountId as string | undefined)
+  );
   const menteeId = resolveNumericId(selectedTodo?.assigneeId ?? activeMenteeId);
   const todoItemId = resolveTodoItemId(selectedTodo);
 
@@ -229,7 +308,7 @@ export default function MentorFeedbackView() {
 
   const handleOpenModal = () => {
     if (!selectedTodo) return;
-    setDraftSummary(selectedFeedback?.summary ?? selectedTodo.title);
+    setDraftSummary(selectedFeedback?.title ?? selectedFeedback?.summary ?? selectedTodo.title);
     setDraftContent(selectedFeedback?.content ?? '');
     setDraftError('');
     setIsModalOpen(true);
@@ -254,6 +333,7 @@ export default function MentorFeedbackView() {
         await updateFeedbackMutation.mutateAsync({
           id: selectedFeedback.id,
           patch: {
+            title: draftSummary.trim(),
             summary: draftSummary.trim(),
             content: draftContent.trim(),
             todoItemId,
@@ -266,6 +346,7 @@ export default function MentorFeedbackView() {
           menteeId,
           todoItemId,
           targetDate: selectedTodo.dueDate,
+          title: draftSummary.trim(),
           summary: draftSummary.trim(),
           content: draftContent.trim(),
         });

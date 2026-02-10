@@ -17,6 +17,19 @@ function todayISO(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function formatCreateError(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message.includes('plannerId')) {
+      return '로그인이 필요합니다. 다시 로그인해 주세요.';
+    }
+    if (error.message.includes('API Error')) {
+      return '서버 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+    }
+    return error.message;
+  }
+  return '할 일 추가에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+}
+
 export default function TodoCreateModal({ onClose, initialDate }: Props) {
   const createTodoMutation = useCreateTodoMutation();
   const [title, setTitle] = useState('');
@@ -24,6 +37,7 @@ export default function TodoCreateModal({ onClose, initialDate }: Props) {
   const [dueDate, setDueDate] = useState(initialDate || todayISO());
   const [dueTime, setDueTime] = useState('23:59');
   const [error, setError] = useState('');
+  const isSubmitting = createTodoMutation.isPending;
 
   const closeModal = () => {
     setError('');
@@ -32,6 +46,8 @@ export default function TodoCreateModal({ onClose, initialDate }: Props) {
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    if (isSubmitting) return;
     const trimmed = title.trim();
     const dateValue = dueDate.trim();
     const timeValue = dueTime.trim();
@@ -43,9 +59,20 @@ export default function TodoCreateModal({ onClose, initialDate }: Props) {
       setError('마감 날짜와 시간을 선택해 주세요.');
       return;
     }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      setError('날짜 형식이 올바르지 않습니다.');
+      return;
+    }
+    if (typeof window !== 'undefined' && !window.localStorage.getItem('accessToken')) {
+      setError('로그인이 필요합니다. 다시 로그인해 주세요.');
+      return;
+    }
     createTodoMutation.mutate(
       { title: trimmed, subject, dueDate: dateValue, dueTime: timeValue, type: '학습' },
-      { onSuccess: () => closeModal() }
+      {
+        onSuccess: () => closeModal(),
+        onError: (err) => setError(formatCreateError(err)),
+      }
     );
   };
 
@@ -126,15 +153,17 @@ export default function TodoCreateModal({ onClose, initialDate }: Props) {
             <button
               type="button"
               onClick={closeModal}
-              className="flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-700"
+              className="flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 disabled:opacity-60"
+              disabled={isSubmitting}
             >
               취소
             </button>
             <button
               type="submit"
-              className="flex-1 rounded-xl bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5"
+              className="flex-1 rounded-xl bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={isSubmitting}
             >
-              추가
+              {isSubmitting ? '추가 중...' : '추가'}
             </button>
           </div>
         </form>

@@ -1,10 +1,16 @@
 'use client';
 
-import { useMemo, useSyncExternalStore } from 'react';
-import { Bell, User } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { User } from 'lucide-react';
 import seolStudyIcon from '@/src/assets/icons/seolStudy.svg';
+import bellIcon from '@/src/assets/icons/bell.svg';
+import { useNotificationsQuery } from '@/src/hooks/notificationQueries';
+import NotificationEmpty from '@/src/components/planner/notifications/NotificationEmpty';
+import NotificationList from '@/src/components/planner/notifications/NotificationList';
+import NotificationLoginHint from '@/src/components/planner/notifications/NotificationLoginHint';
 
 const ACCOUNT_ID_FALLBACK = 'OOO';
+const READ_STORAGE_KEY = 'notification-read';
 
 function getAccountIdSnapshot() {
   if (typeof window === 'undefined') return ACCOUNT_ID_FALLBACK;
@@ -24,11 +30,33 @@ function subscribeAccountId(callback: () => void) {
 }
 
 export default function MentorTopBar() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [readIds, setReadIds] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    const raw = window.localStorage.getItem(READ_STORAGE_KEY);
+    if (!raw) return new Set();
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return new Set(parsed.map((id) => String(id)));
+      }
+    } catch {
+      // ignore parse errors
+    }
+    return new Set();
+  });
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
   const accountId = useSyncExternalStore(
     subscribeAccountId,
     getAccountIdSnapshot,
     () => ACCOUNT_ID_FALLBACK
   );
+  const hasToken = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const token = window.localStorage.getItem('accessToken');
+    return Boolean(token);
+  }, []);
+  const { data: notifications = [] } = useNotificationsQuery(hasToken);
   const dateLabel = useMemo(() => {
     const formatter = new Intl.DateTimeFormat('ko-KR', {
       month: 'long',
@@ -38,6 +66,41 @@ export default function MentorTopBar() {
     return formatter.format(new Date());
   }, []);
   const brandIconSrc = typeof seolStudyIcon === 'string' ? seolStudyIcon : seolStudyIcon?.src;
+  const hasUnread = notifications.some(
+    (item) => !item.isRead && !readIds.has(item.id)
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
+        setIsOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isOpen]);
+
+  const persistRead = (next: Set<string>) => {
+    setReadIds(next);
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(Array.from(next)));
+  };
+
+  const markRead = (id: string) => {
+    if (readIds.has(id)) return;
+    const next = new Set(readIds);
+    next.add(id);
+    persistRead(next);
+  };
 
   return (
     <header className="border-b border-[#F5F5F5] bg-white">
@@ -54,17 +117,56 @@ export default function MentorTopBar() {
           </div>
         </div>
         <div className="flex items-center justify-between gap-3 sm:ml-auto sm:justify-end">
-          <button
-            type="button"
-            className="relative flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-700"
-            aria-label="알림"
-          >
-            <Bell className="h-4 w-4" />
-            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-rose-500" />
-          </button>
+          <div className="relative" ref={dropdownRef}>
+            <button
+              type="button"
+              className="relative flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-700"
+              aria-label="알림"
+              onClick={() => setIsOpen((prev) => !prev)}
+            >
+              {typeof bellIcon === 'string' ? (
+                <img className="h-4 w-4" src={bellIcon} alt="" aria-hidden />
+              ) : (
+                <img className="h-4 w-4" src={bellIcon?.src} alt="" aria-hidden />
+              )}
+              {hasUnread && (
+                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-rose-500" />
+              )}
+            </button>
+            {isOpen && (
+              <div className="absolute right-0 mt-3 w-[320px] max-h-[60vh] overflow-y-auto rounded-3xl border border-neutral-100 bg-white p-4 shadow-2xl">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-neutral-900">알림</p>
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className="text-xs font-semibold text-neutral-400 hover:text-neutral-700"
+                  >
+                    닫기
+                  </button>
+                </div>
+                {!hasToken ? (
+                  <NotificationLoginHint />
+                ) : notifications.length === 0 ? (
+                  <NotificationEmpty />
+                ) : (
+                  <NotificationList
+                    notifications={notifications}
+                    readIds={readIds}
+                    onMarkRead={markRead}
+                  />
+                )}
+              </div>
+            )}
+          </div>
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-200">
-              <User className="h-4 w-4 text-neutral-500" aria-hidden />
+              <User
+                className="h-4 w-4 text-neutral-500"
+                fill="currentColor"
+                stroke="none"
+                aria-hidden
+              />
             </span>
             <div className="min-w-0 text-xs text-neutral-500">
               <div className="flex items-center gap-2">

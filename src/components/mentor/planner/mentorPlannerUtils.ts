@@ -146,28 +146,10 @@ export function buildMenteeCardsFromTodos(
     byAssignee.set(id, current);
   });
 
-  if (byAssignee.size === 0) {
-    return fallback.map((mentee) => {
-      const subjects = Array.from(
-        new Set(mentee.subjects ?? mentee.today.map((item) => item.subject))
-      );
-      return {
-        id: mentee.id,
-        name: mentee.name,
-        grade: mentee.grade,
-        subjects,
-        weaknessType: mentee.weaknessType,
-        activeLevel: mentee.activeLevel,
-        goalRate: Math.max(0, Math.min(100, getGoalRate(mentee))),
-        todayCount: mentee.today.length,
-      };
-    });
-  }
-
-  return Array.from(byAssignee.values()).map((entry) => {
-    const base =
-      fallback.find((mentee) => mentee.id === entry.id) ??
-      fallback.find((mentee) => mentee.name === entry.name);
+  const buildFromEntry = (
+    entry: { id: string; name: string; todos: Todo[] },
+    base?: Mentee
+  ): MenteeCard => {
     const subjects = Array.from(new Set(entry.todos.map((todo) => todo.subject)));
     const total = entry.todos.length;
     const done = entry.todos.filter((todo) => todo.status === 'DONE').length;
@@ -188,5 +170,40 @@ export function buildMenteeCardsFromTodos(
       goalRate,
       todayCount,
     };
+  };
+
+  if (fallback.length === 0) {
+    return Array.from(byAssignee.values()).map((entry) => buildFromEntry(entry));
+  }
+
+  const cards = fallback.map((mentee) => {
+    const entry =
+      byAssignee.get(String(mentee.id)) ??
+      Array.from(byAssignee.values()).find((item) => item.name === mentee.name);
+    if (entry) {
+      return buildFromEntry(entry, mentee);
+    }
+    const subjects = Array.from(
+      new Set(mentee.subjects ?? mentee.today.map((item) => item.subject))
+    );
+    return {
+      id: mentee.id,
+      name: mentee.name,
+      grade: mentee.grade,
+      subjects,
+      weaknessType: mentee.weaknessType,
+      activeLevel: mentee.activeLevel,
+      goalRate: Math.max(0, Math.min(100, getGoalRate(mentee))),
+      todayCount: mentee.today.length,
+    };
   });
+
+  const knownIds = new Set(cards.map((card) => card.id));
+  Array.from(byAssignee.values()).forEach((entry) => {
+    if (!knownIds.has(entry.id)) {
+      cards.push(buildFromEntry(entry));
+    }
+  });
+
+  return cards;
 }

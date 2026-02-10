@@ -28,23 +28,27 @@ export default function TaskProgressCard({
   const openPanel = useTimerStore((s) => s.openPanel);
   const setActiveTodoId = useTimerStore((s) => s.setActiveTodoId);
   const canUseTimer = !isLocked && !isDone && Boolean(todoId);
+  const statusStyles =
+    statusLabel === '완료'
+      ? 'bg-emerald-50 text-emerald-700'
+      : statusLabel === '진행중'
+      ? 'bg-blue-50 text-blue-700'
+      : 'bg-neutral-100 text-neutral-600';
 
   return (
-    <section className="rounded-2xl bg-neutral-100 p-4">
+    <section className="rounded-2xl bg-[#F6F8FA] p-5">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold text-neutral-500">과제 진행</p>
-          <p className="mt-1 text-sm font-semibold text-neutral-900">
-            {statusLabel}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs font-semibold text-neutral-500">진행한 시간</p>
-          <p className="mt-1 text-sm font-semibold text-neutral-900">
-            {formatHMS(studySeconds)}
-          </p>
-        </div>
+        <p className="text-sm font-semibold text-neutral-500">과제 진행</p>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles}`}>
+          {statusLabel}
+        </span>
       </div>
+      <p
+        className="mt-4 text-[36px] font-semibold leading-none text-neutral-900"
+        style={{ fontFamily: 'Inter, sans-serif' }}
+      >
+        {formatHMS(studySeconds)}
+      </p>
 
       {canUseTimer && (
         <div className="mt-4 flex justify-end">

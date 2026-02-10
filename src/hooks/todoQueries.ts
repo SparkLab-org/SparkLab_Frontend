@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { CreateTodoInput, ListTodosParams, UpdateTodoInput } from '@/src/services/todo.api';
 import {
+  createFixedTodo,
   createTodo,
   deleteTodo,
   getTodoSnapshot,
@@ -13,15 +14,16 @@ import {
 export const todoQueryKeys = {
   all: ['todos'] as const,
   detail: (id?: string | null) => [...todoQueryKeys.all, 'detail', id ?? null] as const,
-  list: (plannerId?: number | null, planDate?: string | null, menteeId?: number | null) =>
+  list: (accountId?: string | null, plannerId?: number | null, planDate?: string | null) =>
     [
       ...todoQueryKeys.all,
       'list',
+      accountId ?? null,
       plannerId ?? null,
       planDate ?? null,
-      menteeId ?? null,
     ] as const,
-  range: (dates: string[]) => [...todoQueryKeys.all, 'range', ...dates] as const,
+  range: (accountId: string | null, dates: string[]) =>
+    [...todoQueryKeys.all, 'range', accountId ?? null, ...dates] as const,
 };
 
 type TodoItem = ReturnType<typeof getTodoSnapshot>[number];
@@ -29,18 +31,22 @@ type TodoItem = ReturnType<typeof getTodoSnapshot>[number];
 const RANGE_CACHE_TTL_MS = 60 * 1000;
 const RANGE_TODOS_CACHE = new Map<string, { ts: number; items: TodoItem[] }>();
 
-function readRangeCache(date: string): TodoItem[] | null {
-  const cached = RANGE_TODOS_CACHE.get(date);
+function getRangeCacheKey(date: string, accountId: string | null) {
+  return `${accountId ?? 'anon'}:${date}`;
+}
+
+function readRangeCache(key: string): TodoItem[] | null {
+  const cached = RANGE_TODOS_CACHE.get(key);
   if (!cached) return null;
   if (Date.now() - cached.ts > RANGE_CACHE_TTL_MS) {
-    RANGE_TODOS_CACHE.delete(date);
+    RANGE_TODOS_CACHE.delete(key);
     return null;
   }
   return cached.items;
 }
 
-function writeRangeCache(date: string, items: TodoItem[]) {
-  RANGE_TODOS_CACHE.set(date, { ts: Date.now(), items });
+function writeRangeCache(key: string, items: TodoItem[]) {
+  RANGE_TODOS_CACHE.set(key, { ts: Date.now(), items });
 }
 
 function clearRangeCache() {
@@ -54,7 +60,6 @@ function isValidDateString(value: string) {
 export function useTodosQuery(params: ListTodosParams = {}) {
   const plannerId = params.plannerId ?? null;
   let planDate = params.planDate ?? null;
-  const menteeId = params.menteeId ?? null;
   if (!planDate && plannerId == null) {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -67,11 +72,12 @@ export function useTodosQuery(params: ListTodosParams = {}) {
     ...params,
     plannerId: plannerId ?? undefined,
     planDate: planDate ?? undefined,
-    menteeId: menteeId ?? undefined,
   };
+  const accountId =
+    typeof window !== 'undefined' ? window.localStorage.getItem('accountId') : null;
 
   return useQuery({
-    queryKey: todoQueryKeys.list(plannerId, planDate, menteeId),
+    queryKey: todoQueryKeys.list(accountId, plannerId, planDate),
     queryFn: () => listTodos(resolvedParams),
     initialData: () => getTodoSnapshot(),
   });
@@ -94,16 +100,19 @@ export function useTodosRangeQuery(dates: string[]) {
   const normalized = Array.from(
     new Set(dates.filter((date) => isValidDateString(date)))
   ).sort();
+  const accountId =
+    typeof window !== 'undefined' ? window.localStorage.getItem('accountId') : null;
 
   return useQuery({
-    queryKey: todoQueryKeys.range(normalized),
+    queryKey: todoQueryKeys.range(accountId, normalized),
     queryFn: async () => {
       if (normalized.length === 0) return [];
       const merged = new Map<string, TodoItem>();
       const targets: string[] = [];
 
       normalized.forEach((planDate) => {
-        const cached = readRangeCache(planDate);
+        const cacheKey = getRangeCacheKey(planDate, accountId);
+        const cached = readRangeCache(cacheKey);
         if (cached) {
           cached.forEach((todo) => merged.set(todo.id, todo));
         } else {
@@ -138,7 +147,8 @@ export function useTodosRangeQuery(dates: string[]) {
 
       results.forEach((items, index) => {
         const planDate = targets[index];
-        writeRangeCache(planDate, items);
+        const cacheKey = getRangeCacheKey(planDate, accountId);
+        writeRangeCache(cacheKey, items);
         items.forEach((todo) => merged.set(todo.id, todo));
       });
 
@@ -153,7 +163,8 @@ export function useCreateTodoMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreateTodoInput) => createTodo(input),
+    mutationFn: (input: CreateTodoInput) =>
+      input.isFixed ? createFixedTodo(input) : createTodo(input),
     onSuccess: () => {
       clearRangeCache();
       queryClient.invalidateQueries({ queryKey: todoQueryKeys.all });

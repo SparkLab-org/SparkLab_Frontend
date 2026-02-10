@@ -53,7 +53,7 @@ export default function TodoList({
         if (filterMode === 'study') return !todo.isFixed;
         return true;
       }),
-    [todos, selectedDate]
+    [todos, selectedDate, filterMode]
   );
 
   const filteredTodos = useMemo(() => {

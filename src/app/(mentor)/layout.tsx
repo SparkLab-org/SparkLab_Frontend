@@ -30,6 +30,7 @@ export default function MentorLayout({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     if (!isSuccess || !menteeData) return;
+    if (menteeData.length === 0) return;
     const mapped: Mentee[] = menteeData.map((mentee) => ({
       id: String(mentee.menteeId),
       name: mentee.accountId ?? `멘티 ${mentee.menteeId}`,
@@ -50,7 +51,7 @@ export default function MentorLayout({ children }: { children: React.ReactNode }
       <MentorTopBar />
       <div className="flex w-full flex-col lg:flex-row lg:items-start">
         <MentorSidebar />
-        <main className="flex-1 px-6 py-6">{children}</main>
+        <main className="flex-1 bg-[#F6F8FA] px-6 py-6">{children}</main>
       </div>
     </div>
   );

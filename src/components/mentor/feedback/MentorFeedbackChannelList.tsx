@@ -1,5 +1,6 @@
 'use client';
 
+import { User } from 'lucide-react';
 import type { MenteeCard } from '@/src/components/mentor/feedback/mentorFeedbackTypes';
 
 type Props = {
@@ -26,10 +27,19 @@ export default function MentorFeedbackChannelList({
           >
             <div
               className={[
-                'relative h-12 w-12 rounded-full',
+                'relative flex h-12 w-12 items-center justify-center rounded-full',
                 isActive ? 'bg-[#004DFF]' : 'bg-neutral-300',
               ].join(' ')}
             >
+              <User
+                className={[
+                  'h-6 w-6',
+                  isActive ? 'text-white' : 'text-neutral-500',
+                ].join(' ')}
+                fill="currentColor"
+                stroke="none"
+                aria-hidden
+              />
               {mentee.feedbackRequests > 0 && (
                 <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-rose-400" />
               )}

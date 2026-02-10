@@ -39,6 +39,19 @@ export default function AssignmentDetailView({ todoId }: Props) {
 
   const storageKey = todo ? `assignment-submission:${todo.id}` : null;
 
+  const resolveAssignmentId = () => {
+    if (!todo) return undefined;
+    const fromTodo = Number((todo as { assignmentId?: number | string }).assignmentId);
+    if (Number.isFinite(fromTodo)) return fromTodo;
+    if (typeof window !== 'undefined') {
+      const raw = window.localStorage.getItem('assignmentIdOverride');
+      const override = raw ? Number(raw) : NaN;
+      if (Number.isFinite(override)) return override;
+    }
+    const fallback = Number(todo.id);
+    return Number.isFinite(fallback) ? fallback : undefined;
+  };
+
   useEffect(() => {
     if (!storageKey || typeof window === 'undefined') return;
     const raw = window.localStorage.getItem(storageKey);
@@ -77,9 +90,14 @@ export default function AssignmentDetailView({ todoId }: Props) {
 
   const handleSubmit = (comment: string, files: File[]) => {
     if (!todo) return;
+    const assignmentId = resolveAssignmentId();
+    if (!assignmentId) {
+      setSubmitError('assignmentId를 찾지 못했습니다.');
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError(null);
-    submitAssignment(Number(todo.id), files, comment)
+    submitAssignment(assignmentId, files, comment)
       .then((res) => {
         const latest = resolveLatestSubmission(res.submissions);
         if (latest) {
@@ -114,10 +132,15 @@ export default function AssignmentDetailView({ todoId }: Props) {
 
   const handleUpdateComment = () => {
     if (!todo || !lastSubmission) return;
+    const assignmentId = resolveAssignmentId();
+    if (!assignmentId) {
+      setSubmitError('assignmentId를 찾지 못했습니다.');
+      return;
+    }
     setIsSubmissionBusy(true);
     setSubmitError(null);
     updateAssignmentSubmission(
-      Number(todo.id),
+      assignmentId,
       lastSubmission.submissionId,
       undefined,
       submissionComment.trim()
@@ -140,10 +163,15 @@ export default function AssignmentDetailView({ todoId }: Props) {
 
   const handleUpdateFile = (file: File) => {
     if (!todo || !lastSubmission) return;
+    const assignmentId = resolveAssignmentId();
+    if (!assignmentId) {
+      setSubmitError('assignmentId를 찾지 못했습니다.');
+      return;
+    }
     setIsSubmissionBusy(true);
     setSubmitError(null);
     updateAssignmentSubmission(
-      Number(todo.id),
+      assignmentId,
       lastSubmission.submissionId,
       file,
       submissionComment.trim()
@@ -161,9 +189,14 @@ export default function AssignmentDetailView({ todoId }: Props) {
 
   const handleDeleteComment = () => {
     if (!todo || !lastSubmission) return;
+    const assignmentId = resolveAssignmentId();
+    if (!assignmentId) {
+      setSubmitError('assignmentId를 찾지 못했습니다.');
+      return;
+    }
     setIsSubmissionBusy(true);
     setSubmitError(null);
-    deleteAssignmentSubmissionComment(Number(todo.id), lastSubmission.submissionId)
+    deleteAssignmentSubmissionComment(assignmentId, lastSubmission.submissionId)
       .then((updated) => {
         persistSubmission(updated);
         setSubmissionComment(updated.comment ?? '');
@@ -177,9 +210,14 @@ export default function AssignmentDetailView({ todoId }: Props) {
 
   const handleDeleteSubmission = () => {
     if (!todo || !lastSubmission) return;
+    const assignmentId = resolveAssignmentId();
+    if (!assignmentId) {
+      setSubmitError('assignmentId를 찾지 못했습니다.');
+      return;
+    }
     setIsSubmissionBusy(true);
     setSubmitError(null);
-    deleteAssignmentSubmission(Number(todo.id), lastSubmission.submissionId)
+    deleteAssignmentSubmission(assignmentId, lastSubmission.submissionId)
       .then(() => {
         persistSubmission(null);
         setSubmissionComment('');

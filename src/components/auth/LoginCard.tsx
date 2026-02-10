@@ -46,6 +46,18 @@ export default function LoginCard({ role, onRoleChange }: Props) {
     setError('');
 
     try {
+      if (typeof window !== 'undefined') {
+        // 이전 계정 정보 정리 (계정 섞임 방지)
+        const keysToRemove = ['accountId', 'menteeId', 'mentorId', 'plannerId', 'role'];
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
+        for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+          const key = localStorage.key(i);
+          if (!key) continue;
+          if (key.startsWith('dailyPlan:') || key.startsWith('plannerId:')) {
+            localStorage.removeItem(key);
+          }
+        }
+      }
       const res = await signIn({ accountId, password: accountPw });
       console.log('signin res:', res);
       // ✅ 토큰 저장
@@ -72,6 +84,12 @@ export default function LoginCard({ role, onRoleChange }: Props) {
               const res = await findOrCreateDailyPlan({ planDate });
               if (res.dailyPlanId && res.dailyPlanId > 0) {
                 localStorage.setItem('plannerId', String(res.dailyPlanId));
+                if (typeof me.accountId === 'string') {
+                  localStorage.setItem(
+                    `plannerId:${me.accountId}`,
+                    String(res.dailyPlanId)
+                  );
+                }
               }
             } catch {
               // ignore dailyPlan failures
@@ -92,6 +110,12 @@ export default function LoginCard({ role, onRoleChange }: Props) {
               const res = await findOrCreateDailyPlan({ planDate });
               if (res.dailyPlanId && res.dailyPlanId > 0) {
                 localStorage.setItem('plannerId', String(res.dailyPlanId));
+                if (typeof me.accountId === 'string') {
+                  localStorage.setItem(
+                    `plannerId:${me.accountId}`,
+                    String(res.dailyPlanId)
+                  );
+                }
               }
             } catch {
               // ignore dailyPlan failures

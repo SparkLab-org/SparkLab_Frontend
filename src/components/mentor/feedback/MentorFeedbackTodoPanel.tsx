@@ -27,7 +27,7 @@ export default function MentorFeedbackTodoPanel({
   onSelectTodo,
 }: Props) {
   return (
-    <section className="rounded-3xl bg-[#F5F5F5] p-4">
+    <section className="rounded-3xl bg-white p-4">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-semibold text-neutral-900">{menteeName ?? '멘티 선택'}</p>
@@ -57,7 +57,7 @@ export default function MentorFeedbackTodoPanel({
 
       <div className="mt-5 space-y-4">
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-neutral-400">확인중</p>
+          <p className="text-xs font-semibold text-neutral-400">피드백 요청</p>
           {pendingTodos.length === 0 && (
             <div className="rounded-2xl bg-white px-3 py-4 text-xs text-neutral-400">
               확인 중인 과제가 없습니다.
@@ -82,11 +82,13 @@ export default function MentorFeedbackTodoPanel({
                   <ChevronRight className="h-4 w-4 text-neutral-300" />
                 </div>
                 <div className="mt-2 flex items-center gap-2 text-[10px] text-neutral-500">
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-600">
-                    확인중
-                  </span>
-                  <span className="rounded-full bg-neutral-100 px-2 py-0.5">
-                    {todo.subject}
+                  <span
+                    className={[
+                      'rounded-full px-2 py-0.5',
+                      'bg-blue-100 text-blue-700',
+                    ].join(' ')}
+                  >
+                    확인대기
                   </span>
                 </div>
               </button>
@@ -122,9 +124,6 @@ export default function MentorFeedbackTodoPanel({
                 <div className="mt-2 flex items-center gap-2 text-[10px] text-neutral-500">
                   <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-neutral-600">
                     완료
-                  </span>
-                  <span className="rounded-full bg-neutral-100 px-2 py-0.5">
-                    {todo.subject}
                   </span>
                 </div>
               </button>

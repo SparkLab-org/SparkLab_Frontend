@@ -3,22 +3,16 @@
 import { ChevronRight } from 'lucide-react';
 import { getProgressFillStyle } from '@/src/lib/utils/progressStyle';
 
-export type MyAchievementTab = 'routine' | 'today';
-
 type Props = {
   monthPercent: number;
   monthDoneCount: number;
   monthTotalCount: number;
-  activeTab: MyAchievementTab;
-  onChangeTab: (tab: MyAchievementTab) => void;
 };
 
 export default function MyAchievementCard({
   monthPercent,
   monthDoneCount,
   monthTotalCount,
-  activeTab,
-  onChangeTab,
 }: Props) {
   return (
     <section className="rounded-3xl bg-neutral-100 p-4">
@@ -54,29 +48,6 @@ export default function MyAchievementCard({
       <p className="mt-2 text-xs text-neutral-400">
         완료 {monthDoneCount}/{monthTotalCount}
       </p>
-
-      <div className="mt-4 grid grid-cols-2 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50 text-sm font-semibold">
-        <button
-          type="button"
-          onClick={() => onChangeTab('routine')}
-          className={[
-            'px-4 py-3 transition',
-            activeTab === 'routine' ? 'bg-white text-neutral-900' : 'text-neutral-500',
-          ].join(' ')}
-        >
-          루틴
-        </button>
-        <button
-          type="button"
-          onClick={() => onChangeTab('today')}
-          className={[
-            'border-l border-neutral-200 px-4 py-3 transition',
-            activeTab === 'today' ? 'bg-white text-neutral-900' : 'text-neutral-500',
-          ].join(' ')}
-        >
-          오늘 할일
-        </button>
-      </div>
     </section>
   );
 }

@@ -37,11 +37,13 @@ export async function submitAssignment(
   comment?: string
 ): Promise<AssignmentSubmissionBatchResponse> {
   const fileList = Array.isArray(files) ? files : [files];
-  const formData = new FormData();
-  if (fileList[0]) {
-    formData.append('file', fileList[0]);
+  if (fileList.length === 0) {
+    throw new Error('file is required');
   }
-  fileList.forEach((file) => formData.append('files', file));
+  const formData = new FormData();
+  fileList.forEach((file) => {
+    formData.append('files', file);
+  });
 
   const url = buildQuery(`/assignments/${assignmentId}/submissions`, { comment });
   const response = await apiFetch<AssignmentSubmissionBatchResponse | AssignmentSubmissionResponse>(

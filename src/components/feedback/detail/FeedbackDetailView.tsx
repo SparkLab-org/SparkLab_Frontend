@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
-import { useTodosQuery } from '@/src/hooks/todoQueries';
-import { useFeedbacksQuery } from '@/src/hooks/feedbackQueries';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { useTodoDetailQuery } from '@/src/hooks/todoQueries';
+import { useFeedbackDetailQuery, useFeedbacksQuery } from '@/src/hooks/feedbackQueries';
+import type { Feedback } from '@/src/lib/types/feedback';
+import { readFeedbackPreview, storeFeedbackPreview } from '@/src/lib/utils/feedbackPreview';
 import {
   createFeedbackComment,
   listFeedbackComments,
+  listFeedbacks,
 } from '@/src/services/feedback.api';
 import FeedbackDetailHeader from './FeedbackDetailHeader';
 import FeedbackCommentThread from './FeedbackCommentThread';
@@ -25,26 +28,115 @@ type Props = {
 };
 
 export default function FeedbackDetailView({ todoId, role }: Props) {
-  const { data: todos = [] } = useTodosQuery();
   const todoItemId = Number(todoId);
-  const { data: feedbacks = [] } = useFeedbacksQuery({
+  const { data: feedbacksByTodo = [] } = useFeedbacksQuery({
     todoItemId: Number.isFinite(todoItemId) ? todoItemId : undefined,
   });
-  const todo = useMemo(() => {
-    return todos.find((item) => item.id === todoId);
-  }, [todos, todoId]);
+  const { data: feedbacksAll = [] } = useFeedbacksQuery();
+  const { data: feedbackDetail } = useFeedbackDetailQuery(
+    Number.isFinite(todoItemId) ? todoItemId : undefined
+  );
+  const [directFeedback, setDirectFeedback] = useState<Feedback | null>(null);
+  const [previewMessage, setPreviewMessage] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const resolvedRole: 'mentee' | 'mentor' =
     role ?? (pathname.startsWith('/mentor') ? 'mentor' : 'mentee');
 
   useEffect(() => {
-    if (!matchedFeedback?.id) return;
+    const previewFromUrl = searchParams.get('preview');
+    if (previewFromUrl && previewFromUrl.trim().length > 0) {
+      setPreviewMessage(previewFromUrl);
+      storeFeedbackPreview(String(todoId), previewFromUrl);
+      return;
+    }
+    setPreviewMessage(readFeedbackPreview(String(todoId)));
+  }, [todoId, searchParams]);
+
+  const matchedFeedback = useMemo(() => {
+    const byTodo = feedbacksByTodo.find(
+      (item) => String(item.todoItemId ?? '') === String(todoId)
+    );
+    if (byTodo) return byTodo;
+    const byTodoFromAll = feedbacksAll.find(
+      (item) => String(item.todoItemId ?? '') === String(todoId)
+    );
+    if (byTodoFromAll) return byTodoFromAll;
+    const byFeedbackId = feedbacksAll.find((item) => item.id === String(todoId));
+    if (byFeedbackId) return byFeedbackId;
+    return (
+      feedbackDetail ??
+      null
+    );
+  }, [feedbacksByTodo, feedbacksAll, todoId, feedbackDetail]);
+
+  useEffect(() => {
+    if (matchedFeedback || !Number.isFinite(todoItemId)) return;
+    let cancelled = false;
+    async function hydrateFeedback() {
+      try {
+        const byTodo = await listFeedbacks({ todoItemId });
+        if (cancelled) return;
+        if (byTodo.length > 0) {
+          setDirectFeedback(byTodo[0]);
+          return;
+        }
+      } catch {
+        // ignore and fallback to full list
+      }
+      try {
+        const all = await listFeedbacks();
+        if (cancelled) return;
+        const fromAll =
+          all.find((item) => String(item.todoItemId ?? '') === String(todoId)) ??
+          all.find((item) => item.id === String(todoId)) ??
+          null;
+        setDirectFeedback(fromAll);
+      } catch {
+        if (!cancelled) setDirectFeedback(null);
+      }
+    }
+    hydrateFeedback();
+    return () => {
+      cancelled = true;
+    };
+  }, [matchedFeedback, todoItemId, todoId]);
+
+  const resolvedFeedback = matchedFeedback ?? directFeedback;
+  const { data: todoFromRoute } = useTodoDetailQuery(todoId);
+  const { data: todoFromFeedback } = useTodoDetailQuery(
+    resolvedFeedback?.todoItemId ? String(resolvedFeedback.todoItemId) : undefined
+  );
+  const todo = todoFromFeedback ?? todoFromRoute ?? null;
+
+  const feedbackSubjectLabel = useMemo(() => {
+    const subject = resolvedFeedback?.subject;
+    if (!subject) return undefined;
+    if (subject === 'ENGLISH') return '영어';
+    if (subject === 'MATH') return '수학';
+    if (subject === 'ALL') return '전체';
+    return '국어';
+  }, [matchedFeedback?.subject]);
+
+  const headerTitle =
+    resolvedFeedback?.title ??
+    resolvedFeedback?.todoTitle ??
+    todo?.title ??
+    '할 일';
+  const headerSubtitle = todo
+    ? `과목: ${todo.subject} · 상태: ${todo.status}`
+    : feedbackSubjectLabel
+    ? `과목: ${feedbackSubjectLabel}`
+    : undefined;
+
+  useEffect(() => {
+    if (!resolvedFeedback?.id) return;
     setLoadingComments(true);
     setCommentError(null);
-    listFeedbackComments(matchedFeedback.id)
+    listFeedbackComments(resolvedFeedback.id)
       .then((items) => {
         const mapped = items.map((item) => ({
           id: String(item.feedbackCommentId),
@@ -60,12 +152,12 @@ export default function FeedbackDetailView({ todoId, role }: Props) {
         setComments([]);
         setLoadingComments(false);
       });
-  }, [matchedFeedback?.id]);
+  }, [resolvedFeedback?.id]);
 
   const handleSubmit = (content: string, role: 'mentee' | 'mentor') => {
-    if (!matchedFeedback?.id) return;
+    if (!resolvedFeedback?.id) return;
     const type = role === 'mentor' ? 'MENTOR_REPLY' : 'MENTEE_QUESTION';
-    createFeedbackComment(matchedFeedback.id, { type, content })
+    createFeedbackComment(resolvedFeedback.id, { type, content })
       .then((created) => {
         const next: Comment = {
           id: String(created.feedbackCommentId),
@@ -81,20 +173,29 @@ export default function FeedbackDetailView({ todoId, role }: Props) {
       });
   };
 
-  const matchedFeedback = useMemo(() => {
-    return feedbacks.find((item) => String(item.todoItemId ?? '') === String(todoId));
-  }, [feedbacks, todoId]);
-
   const feedbackMessage =
-    matchedFeedback?.content?.trim() ||
-    matchedFeedback?.summary?.trim() ||
-    (todo?.feedback && todo.feedback.trim().length > 0 ? todo.feedback : '');
+    resolvedFeedback?.content?.trim() ||
+    resolvedFeedback?.summary?.trim() ||
+    resolvedFeedback?.title?.trim() ||
+    (todo?.feedback && todo.feedback.trim().length > 0 ? todo.feedback : '') ||
+    previewMessage ||
+    '';
+
+  useEffect(() => {
+    if (!resolvedFeedback) return;
+    const fallbackText =
+      resolvedFeedback.content ||
+      resolvedFeedback.summary ||
+      resolvedFeedback.title ||
+      '';
+    storeFeedbackPreview(String(todoId), fallbackText);
+  }, [resolvedFeedback, todoId]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <FeedbackDetailHeader
-        title={todo?.title ?? '할 일'}
-        subtitle={todo ? `과목: ${todo.subject} · 상태: ${todo.status}` : undefined}
+        title={headerTitle}
+        subtitle={headerSubtitle}
       />
 
       <section className="rounded-2xl bg-[#F5F5F5] p-5">

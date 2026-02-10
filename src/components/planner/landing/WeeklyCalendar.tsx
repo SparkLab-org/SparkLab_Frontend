@@ -55,7 +55,7 @@ export default function WeeklyCalendar({}: Props) {
 
   return (
     <section
-      className="rounded-3xl p-5 bg-[#F5F5F5]"
+      className="rounded-3xl p-5 bg-white"
     >
       <div className="flex items-center justify-between gap-3 text-sm text-neutral-700">
         {/* <button

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { storeFeedbackPreview } from "@/src/lib/utils/feedbackPreview";
 type FeedbackListItem = {
   id: string;
   todoItemId?: number;
@@ -39,17 +40,26 @@ export default function FeedbackList({ items, isUnread, onMarkRead }: Props) {
             : "진행중"
           : null;
         const detailId = todo.todoItemId ?? todo.feedbackId ?? Number(todo.id);
-        const detailHref = `/feedback/${detailId}`;
+        const previewText = todo.feedback ?? "";
+        const previewParam =
+          previewText.trim().length > 0
+            ? `?preview=${encodeURIComponent(previewText.trim().slice(0, 200))}`
+            : "";
+        const detailHref = `/feedback/${detailId}${previewParam}`;
         return (
           <Link
             key={todo.id}
             href={detailHref}
             className="group rounded-3xl bg-neutral-100 px-4 py-4 transition hover:shadow-sm"
-            onClick={() => onMarkRead(todo.id)}
+            onClick={() => {
+              if (detailId !== undefined && detailId !== null) {
+                storeFeedbackPreview(String(detailId), previewText);
+              }
+              onMarkRead(todo.id);
+            }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-[11px] font-semibold">
-                <span className="rounded-full bg-white px-2 py-0.5 text-neutral-500">오답노트</span>
                 <span className="rounded-full bg-purple-100 px-2 py-0.5 text-purple-500">
                   {typeLabel}
                 </span>

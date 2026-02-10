@@ -1,5 +1,5 @@
 import { apiFetch } from '@/src/services/appClient';
-import { findOrCreateDailyPlan } from '@/src/services/dailyPlan.api';
+import { findOrCreateDailyPlan, findOrCreateDailyPlanForMentee } from '@/src/services/dailyPlan.api';
 import type { Todo, TodoStatus, TodoSubject, TodoType } from '@/src/lib/types/planner';
 import * as mockApi from '@/src/services/todo.mock';
 
@@ -50,7 +50,6 @@ export type UpdateTodoInputWithExtras = UpdateTodoInput & UpdateTodoExtras;
 export type ListTodosParams = {
   plannerId?: number;
   planDate?: string; // YYYY-MM-DD
-  menteeId?: number;
 };
 
 type TodoApiSubject = 'KOREAN' | 'ENGLISH' | 'MATH' | 'ALL' | string;
@@ -141,7 +140,7 @@ const TYPE_FROM_API: Record<string, TodoType> = {
 };
 
 const TYPE_TO_API: Record<TodoType, TodoApiType> = {
-  과제: 'TASK',
+  과제: 'ASSIGNMENT',
   학습: 'STUDY',
 };
 
@@ -225,6 +224,16 @@ function mapTodoFromApi(item: TodoApiItem): Todo {
 
 function resolvePlannerId(): number | undefined {
   if (typeof window !== 'undefined') {
+    const accountId = window.localStorage.getItem('accountId');
+    if (accountId) {
+      const scoped = window.localStorage.getItem(`plannerId:${accountId}`);
+      if (scoped) {
+        const parsed = Number(scoped);
+        if (Number.isFinite(parsed) && parsed > 0) return parsed;
+      }
+      // accountId가 있으면 전역 plannerId로 폴백하지 않습니다(계정 섞임 방지).
+      return undefined;
+    }
     const stored = window.localStorage.getItem('plannerId');
     if (stored) {
       const parsed = Number(stored);
@@ -236,8 +245,39 @@ function resolvePlannerId(): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-function getDailyPlanCacheKey(planDate: string) {
-  return planDate;
+function resolveStoredRole(): 'MENTEE' | 'MENTOR' | null {
+  if (typeof window === 'undefined') return null;
+  const raw = window.localStorage.getItem('role');
+  if (raw && raw.trim().length > 0) {
+    return raw.toUpperCase() === 'MENTEE' ? 'MENTEE' : 'MENTOR';
+  }
+  const path = window.location?.pathname ?? '';
+  if (path.startsWith('/mentor')) return 'MENTOR';
+  return null;
+}
+
+function getDailyPlanCacheKey(planDate: string, contextKey?: string) {
+  if (contextKey) return `${contextKey}:${planDate}`;
+  if (typeof window !== 'undefined') {
+    const accountId = window.localStorage.getItem('accountId');
+    if (accountId) return `${accountId}:${planDate}`;
+  }
+  return `anon:${planDate}`;
+}
+
+function resolveNumericId(value?: string | number | null): number | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+    const match = value.match(/\d+/);
+    if (match) {
+      const extracted = Number(match[0]);
+      return Number.isFinite(extracted) ? extracted : undefined;
+    }
+  }
+  return undefined;
 }
 
 function readDailyPlanCache(key: string): number | undefined {
@@ -379,30 +419,64 @@ function disableDailyPlanForTTL() {
   }
 }
 
-async function resolveDailyPlanId(planDate?: string) {
+async function resolveDailyPlanId(
+  planDate?: string,
+  menteeId?: string | number | null,
+  options?: { force?: boolean; accountId?: string | null }
+) {
   if (!planDate) return undefined;
   if (!isValidDateString(planDate)) return undefined;
-  const key = getDailyPlanCacheKey(planDate);
+  const accountKey = options?.accountId?.trim()
+    ? `account:${options.accountId.trim()}`
+    : undefined;
+  const menteeKey =
+    menteeId !== undefined && menteeId !== null
+      ? `mentee:${String(menteeId)}`
+      : undefined;
+  const contextKey =
+    accountKey && menteeKey
+      ? `${accountKey}|${menteeKey}`
+      : accountKey ?? menteeKey;
+  const key = getDailyPlanCacheKey(planDate, contextKey);
   const cached = readDailyPlanCache(key);
   if (cached) return cached;
-  const disabledUntil = readDailyPlanDisabledUntil();
-  if (disabledUntil && Date.now() < disabledUntil) {
-    return undefined;
+  if (!options?.force) {
+    const disabledUntil = readDailyPlanDisabledUntil();
+    if (disabledUntil && Date.now() < disabledUntil) {
+      return undefined;
+    }
   }
   if (typeof window !== 'undefined') {
     const token = window.localStorage.getItem('accessToken');
     if (!token) return undefined;
   }
-  const lastFail = readDailyPlanFail(key);
-  if (lastFail && Date.now() - lastFail < DAILY_PLAN_FAIL_TTL_MS) {
-    return undefined;
+  if (!options?.force) {
+    const lastFail = readDailyPlanFail(key);
+    if (lastFail && Date.now() - lastFail < DAILY_PLAN_FAIL_TTL_MS) {
+      return undefined;
+    }
   }
   const inflight = DAILY_PLAN_INFLIGHT.get(key);
   if (inflight) return inflight;
 
   const request = (async () => {
     try {
-      const res = await findOrCreateDailyPlan({ planDate });
+      const menteeNumericId = resolveNumericId(menteeId ?? null);
+      const accountId = options?.accountId?.trim();
+      const role = resolveStoredRole();
+      let res;
+      if (role === 'MENTOR' && menteeNumericId) {
+        res = await findOrCreateDailyPlanForMentee(menteeNumericId, {
+          planDate,
+        });
+      }
+      if (!res && role !== 'MENTOR') {
+        res = await findOrCreateDailyPlan({
+          planDate,
+          ...(menteeNumericId ? { menteeId: menteeNumericId } : {}),
+          ...(accountId ? { accountId } : {}),
+        });
+      }
       if (res.dailyPlanId && res.dailyPlanId > 0) {
         writeDailyPlanCache(key, res.dailyPlanId);
         return res.dailyPlanId;
@@ -422,10 +496,10 @@ async function resolveDailyPlanId(planDate?: string) {
 
 function buildListQuery(params: ListTodosParams): string {
   const search = new URLSearchParams();
-  if (params.planDate) {
-    search.set('planDate', params.planDate);
-  } else if (typeof params.plannerId === 'number' && params.plannerId > 0) {
+  if (typeof params.plannerId === 'number' && params.plannerId > 0) {
     search.set('plannerId', String(params.plannerId));
+  } else if (params.planDate) {
+    search.set('planDate', params.planDate);
   }
   const query = search.toString();
   return query ? `?${query}` : '';
@@ -438,11 +512,37 @@ export function getTodoSnapshot(): Todo[] {
 export async function listTodos(params: ListTodosParams = {}): Promise<Todo[]> {
   if (USE_MOCK) return mockApi.listTodos();
 
-  const dailyPlanId = await resolveDailyPlanId(params.planDate);
-  const plannerId = params.plannerId ?? dailyPlanId ?? resolvePlannerId();
+  const storedRole = resolveStoredRole();
+  const storedMenteeId =
+    typeof window !== 'undefined' ? window.localStorage.getItem('menteeId') : null;
+  const storedAccountId =
+    typeof window !== 'undefined' ? window.localStorage.getItem('accountId') : null;
+  const isMentee = storedRole === 'MENTEE' || (!storedRole && Boolean(storedMenteeId));
+
+  const dailyPlanId = isMentee
+    ? await resolveDailyPlanId(params.planDate, storedMenteeId, {
+        accountId: storedAccountId,
+      })
+    : undefined;
+  const plannerId = params.plannerId ?? dailyPlanId;
+  if (isMentee && params.planDate && !plannerId && !params.plannerId) {
+    return [];
+  }
   const query = buildListQuery({ plannerId, planDate: params.planDate });
-  const items = await apiFetch<TodoApiItem[]>(`${TODO_BASE_PATH}${query}`);
-  return items.map(mapTodoFromApi);
+  try {
+    const items = await apiFetch<TodoApiItem[]>(`${TODO_BASE_PATH}${query}`);
+    return items.map(mapTodoFromApi);
+  } catch (error) {
+    if (isMentee) {
+      return [];
+    }
+    if (!isMentee && plannerId && params.planDate) {
+      const fallbackQuery = buildListQuery({ planDate: params.planDate });
+      const items = await apiFetch<TodoApiItem[]>(`${TODO_BASE_PATH}${fallbackQuery}`);
+      return items.map(mapTodoFromApi);
+    }
+    throw error;
+  }
 }
 
 export async function getTodo(todoItemId: string | number): Promise<Todo> {
@@ -460,8 +560,22 @@ export async function getTodo(todoItemId: string | number): Promise<Todo> {
 export async function createTodo(input: CreateTodoInput): Promise<Todo> {
   if (USE_MOCK) return mockApi.createTodo(input);
 
-  const dailyPlanId = await resolveDailyPlanId(input.dueDate);
-  const plannerId = dailyPlanId ?? resolvePlannerId();
+  const storedRole = resolveStoredRole();
+  const storedMenteeId =
+    typeof window !== 'undefined' ? window.localStorage.getItem('menteeId') : null;
+  const storedAccountId =
+    typeof window !== 'undefined' ? window.localStorage.getItem('accountId') : null;
+  const menteePlanTarget =
+    storedRole === 'MENTOR'
+      ? input.assigneeId ?? input.assigneeName ?? null
+      : storedMenteeId;
+  const menteeAccountId =
+    storedRole === 'MENTOR' ? input.assigneeName ?? null : storedAccountId;
+  const dailyPlanId = await resolveDailyPlanId(input.dueDate, menteePlanTarget, {
+    force: true,
+    accountId: menteeAccountId,
+  });
+  const plannerId = dailyPlanId ?? (input.dueDate ? undefined : resolvePlannerId());
   if (!plannerId || plannerId <= 0) throw new Error('plannerId is required');
 
   const payload: CreateTodoApiRequest = {
@@ -558,8 +672,22 @@ export async function deleteTodo(todoItemId: string): Promise<void> {
 export async function createFixedTodo(input: CreateTodoInput): Promise<Todo> {
   if (USE_MOCK) return mockApi.createTodo(input);
 
-  const dailyPlanId = await resolveDailyPlanId(input.dueDate);
-  const plannerId = dailyPlanId ?? resolvePlannerId();
+  const storedRole = resolveStoredRole();
+  const storedMenteeId =
+    typeof window !== 'undefined' ? window.localStorage.getItem('menteeId') : null;
+  const storedAccountId =
+    typeof window !== 'undefined' ? window.localStorage.getItem('accountId') : null;
+  const menteePlanTarget =
+    storedRole === 'MENTOR'
+      ? input.assigneeId ?? input.assigneeName ?? null
+      : storedMenteeId;
+  const menteeAccountId =
+    storedRole === 'MENTOR' ? input.assigneeName ?? null : storedAccountId;
+  const dailyPlanId = await resolveDailyPlanId(input.dueDate, menteePlanTarget, {
+    force: true,
+    accountId: menteeAccountId,
+  });
+  const plannerId = dailyPlanId ?? (input.dueDate ? undefined : resolvePlannerId());
   if (!plannerId || plannerId <= 0) throw new Error('plannerId is required');
 
   const payload: CreateTodoApiRequest = {

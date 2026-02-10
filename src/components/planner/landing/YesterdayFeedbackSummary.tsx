@@ -28,7 +28,7 @@ export default function YesterdayFeedbackSummary() {
   const hasFeedback = yesterdayFeedbackTodos.length > 0;
 
   return (
-    <section className="space-y-3 rounded-3xl bg-[#F5F5F5] p-4">
+    <section className="space-y-3 rounded-3xl bg-white p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <p className="text-lg font-bold text-neutral-900">어제 피드백</p>

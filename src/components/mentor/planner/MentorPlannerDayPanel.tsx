@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import Link from 'next/link';
+import { useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 
 import type { Todo, TodoSubject } from '@/src/lib/types/planner';
@@ -9,8 +10,8 @@ type Props = {
   isOpen: boolean;
   dateLabel: string;
   menteeName?: string;
+  menteeId?: string;
   dayTodos: Todo[];
-  submittedAssignments: Todo[];
   onClose: () => void;
   onCreateAssignment: (input: {
     title: string;
@@ -20,6 +21,7 @@ type Props = {
     guideFileName?: string;
   }) => void;
   isCreating?: boolean;
+  errorMessage?: string;
 };
 
 function getStatusLabel(status: Todo['status']) {
@@ -30,11 +32,12 @@ export default function MentorPlannerDayPanel({
   isOpen,
   dateLabel,
   menteeName,
+  menteeId,
   dayTodos,
-  submittedAssignments,
   onClose,
   onCreateAssignment,
   isCreating = false,
+  errorMessage,
 }: Props) {
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState<TodoSubject>('국어');
@@ -43,6 +46,14 @@ export default function MentorPlannerDayPanel({
   const [guideFileName, setGuideFileName] = useState('');
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const assignmentTodos = useMemo(
+    () => dayTodos.filter((todo) => todo.type === '과제'),
+    [dayTodos]
+  );
+  const studyTodos = useMemo(
+    () => dayTodos.filter((todo) => todo.type !== '과제'),
+    [dayTodos]
+  );
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -102,7 +113,7 @@ export default function MentorPlannerDayPanel({
               <h3 className="text-sm font-semibold text-neutral-900">과제 추가</h3>
               <span className="text-xs text-neutral-400">멘토 전용</span>
             </div>
-            <form onSubmit={handleSubmit} className="rounded-2xl bg-[#F5F5F5] p-4 space-y-3">
+            <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-4 space-y-3">
               <div className="grid gap-2">
                 <label className="text-xs font-semibold text-neutral-600">과제 제목</label>
                 <input
@@ -169,6 +180,9 @@ export default function MentorPlannerDayPanel({
                 )}
               </div>
               {error && <p className="text-xs text-rose-500">{error}</p>}
+              {errorMessage && (
+                <p className="text-xs text-rose-500">{errorMessage}</p>
+              )}
               <button
                 type="submit"
                 disabled={isCreating}
@@ -194,61 +208,81 @@ export default function MentorPlannerDayPanel({
 
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-neutral-900">오늘 할 일</h3>
-              <span className="text-xs text-neutral-500">{dayTodos.length}건</span>
+              <h3 className="text-sm font-semibold text-neutral-900">과제 현황</h3>
+              <span className="text-xs text-neutral-500">{assignmentTodos.length}건</span>
             </div>
             <div className="space-y-2">
-              {dayTodos.length === 0 && (
-                <div className="rounded-2xl bg-[#F5F5F5] px-4 py-6 text-center text-sm text-neutral-500">
-                  등록된 할 일이 없습니다.
+              {assignmentTodos.length === 0 && (
+                <div className="rounded-2xl bg-white px-4 py-6 text-center text-sm text-neutral-500">
+                  등록된 과제가 없습니다.
                 </div>
               )}
-              {dayTodos.map((todo) => (
-                <div
-                  key={todo.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl bg-[#F5F5F5] px-4 py-3 text-xs"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-neutral-900">{todo.title}</p>
-                    <p className="mt-1 text-xs text-neutral-500">
-                      {todo.subject} · {todo.dueTime}
-                    </p>
+              {assignmentTodos.map((todo) => {
+                const content = (
+                  <div className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-xs">
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-900">{todo.title}</p>
+                      <p className="mt-1 text-xs text-neutral-500">
+                        {todo.subject} · {todo.dueTime}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-neutral-600">
+                      {getStatusLabel(todo.status)}
+                    </span>
                   </div>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-neutral-600">
-                    {getStatusLabel(todo.status)}
-                  </span>
-                </div>
-              ))}
+                );
+                return menteeId ? (
+                  <Link
+                    key={todo.id}
+                    href={`/mentor/mentee/${menteeId}/todo/${todo.id}`}
+                    className="block"
+                  >
+                    {content}
+                  </Link>
+                ) : (
+                  <div key={todo.id}>{content}</div>
+                );
+              })}
             </div>
           </section>
 
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-neutral-900">제출된 과제</h3>
-              <span className="text-xs text-neutral-500">{submittedAssignments.length}건</span>
+              <h3 className="text-sm font-semibold text-neutral-900">학습 현황</h3>
+              <span className="text-xs text-neutral-500">{studyTodos.length}건</span>
             </div>
             <div className="space-y-2">
-              {submittedAssignments.length === 0 && (
-                <div className="rounded-2xl bg-[#F5F5F5] px-4 py-6 text-center text-sm text-neutral-500">
-                  제출된 과제가 없습니다.
+              {studyTodos.length === 0 && (
+                <div className="rounded-2xl bg-white px-4 py-6 text-center text-sm text-neutral-500">
+                  등록된 학습이 없습니다.
                 </div>
               )}
-              {submittedAssignments.map((todo) => (
-                <div
-                  key={todo.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl bg-[#F5F5F5] px-4 py-3 text-xs"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-neutral-900">{todo.title}</p>
-                    <p className="mt-1 text-xs text-neutral-500">
-                      {todo.subject} · {todo.dueTime}
-                    </p>
+              {studyTodos.map((todo) => {
+                const content = (
+                  <div className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-xs">
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-900">{todo.title}</p>
+                      <p className="mt-1 text-xs text-neutral-500">
+                        {todo.subject} · {todo.dueTime}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-neutral-600">
+                      {getStatusLabel(todo.status)}
+                    </span>
                   </div>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-emerald-600">
-                    제출 완료
-                  </span>
-                </div>
-              ))}
+                );
+                return menteeId ? (
+                  <Link
+                    key={todo.id}
+                    href={`/mentor/mentee/${menteeId}/todo/${todo.id}`}
+                    className="block"
+                  >
+                    {content}
+                  </Link>
+                ) : (
+                  <div key={todo.id}>{content}</div>
+                );
+              })}
             </div>
           </section>
         </div>

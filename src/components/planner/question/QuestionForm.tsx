@@ -7,7 +7,11 @@ import { useCreateQuestionMutation } from '@/src/hooks/questionQueries';
 
 const SUBJECTS: QuestionSubject[] = ['국어', '수학', '영어'];
 
-export default function QuestionForm() {
+type Props = {
+  basePath?: string;
+};
+
+export default function QuestionForm({ basePath = '/planner/question' }: Props) {
   const router = useRouter();
   const createQuestionMutation = useCreateQuestionMutation();
   const [subject, setSubject] = useState<QuestionSubject>('수학');
@@ -23,7 +27,7 @@ export default function QuestionForm() {
       { title: trimmedTitle, subject, content: trimmedContent },
       {
         onSuccess: () => {
-          router.push('/planner/question');
+          router.push(basePath);
         },
       }
     );

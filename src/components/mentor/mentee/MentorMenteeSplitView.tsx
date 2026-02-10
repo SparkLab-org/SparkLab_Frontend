@@ -7,11 +7,14 @@ import { Maximize2 } from 'lucide-react';
 import { useMentorStore } from '@/src/store/mentorStore';
 import MenteeDetailView from '@/src/components/mentor/mentee/MenteeDetailView';
 import MenteeListView from '@/src/components/mentor/mentee/MenteeListView';
+import MenteeQuestionPanel from '@/src/components/mentor/mentee/MenteeQuestionPanel';
 
 export default function MentorMenteeSplitView() {
   const router = useRouter();
   const selectedId = useMentorStore((s) => s.selectedId);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isQuestionOpen, setIsQuestionOpen] = useState(false);
+  const [questionMenteeId, setQuestionMenteeId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isDrawerOpen) return undefined;
@@ -39,17 +42,27 @@ export default function MentorMenteeSplitView() {
         className="min-w-0 min-h-[calc(100vh-120px)]"
         onClick={() => {
           if (isDrawerOpen) setIsDrawerOpen(false);
+          if (isQuestionOpen) setIsQuestionOpen(false);
         }}
       >
-        <MenteeListView onSelect={() => setIsDrawerOpen(true)} />
+        <MenteeListView
+          onSelect={() => setIsDrawerOpen(true)}
+          onOpenQuestions={(id) => {
+            setQuestionMenteeId(id);
+            setIsDrawerOpen(false);
+            setIsQuestionOpen(true);
+          }}
+        />
       </div>
 
       <div className="fixed inset-0 z-50 pointer-events-none">
         <div
           className={[
             'absolute inset-0 transition-opacity duration-300',
-            isDrawerOpen ? 'opacity-100' : 'opacity-0',
-            'pointer-events-auto lg:pointer-events-none',
+            isDrawerOpen
+              ? 'opacity-100 pointer-events-auto'
+              : 'opacity-0 pointer-events-none',
+            'lg:pointer-events-none',
           ].join(' ')}
           onClick={() => setIsDrawerOpen(false)}
           aria-hidden
@@ -88,6 +101,42 @@ export default function MentorMenteeSplitView() {
           </div>
           <div className="h-[calc(100%-48px)] overflow-y-auto p-4">
             <MenteeDetailView menteeId={selectedId} showBackLink={false} />
+          </div>
+        </div>
+      </div>
+
+      <div className="fixed inset-0 z-[60] pointer-events-none">
+        <div
+          className={[
+            'absolute inset-0 transition-opacity duration-300',
+            isQuestionOpen
+              ? 'opacity-100 pointer-events-auto'
+              : 'opacity-0 pointer-events-none',
+          ].join(' ')}
+          onClick={() => setIsQuestionOpen(false)}
+          aria-hidden
+        />
+        <div
+          role="dialog"
+          aria-modal="true"
+          className={[
+            'absolute right-0 top-0 h-full w-full bg-white shadow-2xl transition-transform duration-300 pointer-events-auto lg:w-1/2',
+            isQuestionOpen ? 'translate-x-0' : 'translate-x-full',
+          ].join(' ')}
+        >
+          <div className="flex items-center justify-between px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setIsQuestionOpen(false)}
+              className="text-base font-semibold text-neutral-500 hover:text-neutral-900"
+              aria-label="질문 패널 닫기"
+            >
+              &gt;
+            </button>
+            <div />
+          </div>
+          <div className="h-[calc(100%-48px)] overflow-y-auto p-4">
+            <MenteeQuestionPanel menteeId={questionMenteeId} />
           </div>
         </div>
       </div>

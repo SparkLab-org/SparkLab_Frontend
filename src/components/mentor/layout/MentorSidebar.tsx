@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Settings } from 'lucide-react';
+import { LogOut } from 'lucide-react';
+import { signOut } from '@/src/services/auth.api';
+import { useAuthStore } from '@/src/store/authStore';
 import feedbackIcon from '@/src/assets/icons/feedback.svg';
 import feedbackActiveIcon from '@/src/assets/icons/feedbackActive.svg';
 import menteesIcon from '@/src/assets/icons/mentees.svg';
@@ -33,6 +35,17 @@ const navItems = [
 
 export default function MentorSidebar() {
   const pathname = usePathname();
+  const logout = useAuthStore((s) => s.logout);
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch {
+      // ignore signout failures
+    } finally {
+      logout();
+    }
+  };
 
   return (
     <aside className="w-full shrink-0  border-[#F5F5F5] lg:max-w-[220px] lg:sticky lg:top-[88px]">
@@ -65,10 +78,11 @@ export default function MentorSidebar() {
         <div className="mt-auto">
           <button
             type="button"
+            onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700"
           >
-            <Settings className="h-4 w-4" />
-            설정
+            <LogOut className="h-4 w-4" />
+            로그아웃
           </button>
         </div>
       </div>

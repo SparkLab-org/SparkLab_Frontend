@@ -31,25 +31,6 @@ export default function Home() {
             <p className="text-base text-neutral-600">
               멘티는 하루 플래너와 과제를, 멘토는 멘티 관리와 피드백을 한 곳에서.
             </p>
-            <div className="flex flex-wrap gap-2 text-sm text-neutral-600">
-              <span className="rounded-full bg-neutral-100 px-3 py-1">반응형 지원</span>
-              <span className="rounded-full bg-neutral-100 px-3 py-1">멘티 · 멘토 분리</span>
-              <span className="rounded-full bg-neutral-100 px-3 py-1">플래너·과제·피드백</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/planner"
-                className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
-              >
-                로그인 없이 멘티 화면 둘러보기
-              </Link>
-              <Link
-                href="/mentor"
-                className="inline-flex items-center justify-center rounded-full border border-neutral-900 px-4 py-2 text-sm font-semibold text-neutral-900 transition hover:-translate-y-0.5 hover:shadow-lg hover:bg-neutral-50"
-              >
-                로그인 없이 멘토 화면 둘러보기
-              </Link>
-            </div>
           </div>
 
           <LoginCard role={role} onRoleChange={setRole} />

@@ -6,6 +6,7 @@ import { formatSeconds } from '@/src/components/mentor/feedback/mentorFeedbackUt
 import { getProgressFillStyle } from '@/src/lib/utils/progressStyle';
 import FeedbackCommentThread from '@/src/components/feedback/detail/FeedbackCommentThread';
 import FeedbackCommentComposer from '@/src/components/feedback/detail/FeedbackCommentComposer';
+import { useTodoDetailQuery } from '@/src/hooks/todoQueries';
 import {
   createFeedbackComment,
   listFeedbackComments,
@@ -26,6 +27,8 @@ export default function MentorFeedbackDetailPanel({
   feedbackId,
   onOpenModal,
 }: Props) {
+  const { data: detailTodo } = useTodoDetailQuery(todo?.id);
+  const resolvedTodo = detailTodo ?? todo;
   const [comments, setComments] = useState<
     { id: string; role: 'mentee' | 'mentor'; content: string; createdAt: number }[]
   >([]);
@@ -80,25 +83,25 @@ export default function MentorFeedbackDetailPanel({
     <section className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-neutral-900">
-          {todo?.title ?? '과제를 선택해 주세요'}
+          {resolvedTodo?.title ?? '과제를 선택해 주세요'}
         </h2>
         <p className="mt-1 text-xs text-neutral-500">
-          {todo
-            ? `${todo.subject} · ${todo.dueDate ?? ''} ${todo.dueTime}`
+          {resolvedTodo
+            ? `${resolvedTodo.subject} · ${resolvedTodo.dueDate ?? ''} ${resolvedTodo.dueTime}`
             : '멘티의 과제를 선택하면 상세 정보를 확인할 수 있습니다.'}
         </p>
       </div>
 
-      <section className="rounded-3xl bg-[#F5F5F5] p-5">
+      <section className="rounded-3xl bg-white p-5">
         <h3 className="text-sm font-semibold text-neutral-900">학습 기록</h3>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl bg-white p-4">
             <p className="text-xs font-semibold text-neutral-500">학습 시간</p>
             <p className="mt-2 text-2xl font-semibold text-neutral-900">
-              {formatSeconds(todo?.studySeconds)}
+              {formatSeconds(resolvedTodo?.studySeconds)}
             </p>
             <p className="mt-2 text-[10px] text-neutral-400">
-              마감 시간 {todo?.dueTime ?? '--:--'}
+              마감 시간 {resolvedTodo?.dueTime ?? '--:--'}
             </p>
           </div>
           <div className="rounded-2xl bg-white p-4">
@@ -132,12 +135,12 @@ export default function MentorFeedbackDetailPanel({
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-900">멘티 제출물</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {todo?.guideFileUrl ? (
+          {resolvedTodo?.guideFileUrl ? (
             <a
-              href={todo.guideFileUrl}
+              href={resolvedTodo.guideFileUrl}
               className="flex h-24 items-center justify-center rounded-2xl bg-neutral-200 text-xs text-neutral-500"
             >
-              {todo.guideFileName ?? '첨부파일'}
+              {resolvedTodo.guideFileName ?? '첨부파일'}
             </a>
           ) : (
             Array.from({ length: 4 }).map((_, index) => (
@@ -169,11 +172,11 @@ export default function MentorFeedbackDetailPanel({
       <section className="space-y-3">
         <h3 className="text-sm font-semibold text-neutral-900">질문/코멘트</h3>
         {!feedbackId ? (
-          <div className="rounded-2xl bg-[#F5F5F5] p-4 text-sm text-neutral-500">
+          <div className="rounded-2xl bg-white p-4 text-sm text-neutral-500">
             피드백을 작성한 뒤 댓글을 남길 수 있습니다.
           </div>
         ) : commentLoading ? (
-          <div className="rounded-2xl bg-[#F5F5F5] p-4 text-sm text-neutral-500">
+          <div className="rounded-2xl bg-white p-4 text-sm text-neutral-500">
             댓글을 불러오는 중...
           </div>
         ) : (

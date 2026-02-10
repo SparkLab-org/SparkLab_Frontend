@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import mentorTodoIcon from '@/src/assets/icons/mentorTodo.svg';
 import type { Todo, TodoSubject } from '@/src/lib/types/planner';
 import { getTodoStatusLabel, getTodoType, isOverdueTask } from '@/src/lib/utils/todoStatus';
 import { getTodoDetailHref } from '@/src/lib/utils/todoLink';
@@ -28,11 +29,23 @@ export default function TodoItem({
   const statusLabel = getTodoStatusLabel(todo);
   const overdueTask = isOverdueTask(todo);
   const lockUncheck = todo.isFixed;
+  const isMentorAssignment = todo.isFixed || todoType === '과제';
   const detailHref = getTodoDetailHref(todo);
+  const isMentorTodo = todo.isFixed || todoType === '과제';
+  const mentorTodoSrc =
+    typeof mentorTodoIcon === 'string' ? mentorTodoIcon : mentorTodoIcon?.src;
   const [editing, setEditing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState(todo.title);
   const [draftSubject, setDraftSubject] = useState<TodoSubject>(todo.subject);
+  const formatStudyTime = (seconds?: number) => {
+    if (!seconds || seconds <= 0) return '';
+    const total = Math.max(0, Math.floor(seconds));
+    const hh = String(Math.floor(total / 3600)).padStart(1, '0');
+    const mm = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
+    const ss = String(total % 60).padStart(2, '0');
+    return `${hh}:${mm}:${ss}`;
+  };
 
   const save = () => {
     if (!onUpdate) return;
@@ -44,54 +57,62 @@ export default function TodoItem({
     return (
       <div
         className={[
-          'rounded-3xl p-4 shadow-sm ring-1',
+          'rounded-[20px] px-4 py-5 shadow-sm ring-1',
           isDone ? 'bg-emerald-50 ring-emerald-200' : 'bg-[#F5F5F5] ring-neutral-100',
         ].join(' ')}
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <label
-              className={[
-                'flex h-6 w-6 items-center justify-center rounded-lg border text-[10px] font-semibold',
-                isDone
-                  ? 'border-[#004DFF] bg-[#004DFF] text-white'
-                  : 'border-neutral-300 bg-white text-neutral-900',
-                lockUncheck ? 'cursor-not-allowed' : 'cursor-pointer',
-              ].join(' ')}
-            >
-              <input
-                type="checkbox"
-                className="sr-only"
-                checked={isDone}
-                disabled={lockUncheck}
-                onChange={() => {
-                  if (lockUncheck) return;
-                  onToggle(todo.id);
-                }}
-                aria-label="할 일 완료"
+            {!isMentorAssignment && (
+              <label
+                className={[
+                  'flex h-6 w-6 items-center justify-center rounded-lg border text-[10px] font-semibold',
+                  isDone
+                    ? 'border-[#004DFF] bg-[#004DFF] text-white'
+                    : 'border-neutral-300 bg-white text-neutral-900',
+                  lockUncheck ? 'cursor-not-allowed' : 'cursor-pointer',
+                ].join(' ')}
+              >
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={isDone}
+                  disabled={lockUncheck}
+                  onChange={() => {
+                    if (lockUncheck) return;
+                    onToggle(todo.id);
+                  }}
+                  aria-label="할 일 완료"
+                />
+                {isDone ? '✓' : ''}
+              </label>
+            )}
+            {isMentorTodo && mentorTodoSrc ? (
+              <img
+                src={mentorTodoSrc}
+                alt=""
+                aria-hidden
+                className="h-6 w-6 shrink-0"
               />
-              {isDone ? '✓' : ''}
-            </label>
+            ) : null}
             <Link
               href={detailHref}
               className="truncate text-sm font-semibold text-neutral-900"
             >
               {todo.title}
             </Link>
-            <span className="text-[10px] font-semibold text-purple-500">
-              {todoType}
-            </span>
             <span
               className={[
                 'rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                statusLabel === '지각' || statusLabel === '미제출'
-                  ? 'bg-rose-100 text-rose-600'
-                  : statusLabel === '완료'
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-neutral-200 text-neutral-600',
+                todoType === '과제'
+                  ? 'bg-purple-100 text-purple-600'
+                  : 'bg-emerald-100 text-emerald-700',
               ].join(' ')}
             >
-              {statusLabel}
+              {todoType}
+            </span>
+            <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#B2B3B6]">
+              {todo.subject}
             </span>
           </div>
           <div className="relative flex items-center gap-2">
@@ -140,6 +161,11 @@ export default function TodoItem({
             </Link>
           </div>
         </div>
+        {formatStudyTime(todo.studySeconds) && (
+          <div className="mt-4 font-bold text-[36px] leading-none text-black">
+            {formatStudyTime(todo.studySeconds)}
+          </div>
+        )}
         {todo.feedback && todo.feedback.trim().length > 0 && (
           <div className="mt-3 rounded-2xl bg-neutral-300 px-3 py-2 font-semibold text-xs text-black line-clamp-2">
             {todo.feedback}
@@ -163,7 +189,7 @@ export default function TodoItem({
     >
       <div className="min-w-0 flex-1 space-y-3 overflow-hidden">
         <div className="flex items-center gap-2 overflow-hidden">
-          {!editing && (
+          {!editing && !isMentorAssignment && (
             <button
               type="button"
               onClick={() => {

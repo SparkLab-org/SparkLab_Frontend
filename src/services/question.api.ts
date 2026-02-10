@@ -12,44 +12,73 @@ export type UpdateQuestionInput = Partial<
   Pick<Question, 'title' | 'subject' | 'status' | 'content' | 'answer'>
 >;
 
+export type CreateQuestionReplyInput = {
+  questionId: string | number;
+  content: string;
+};
+
 type QuestionApiSubject = 'KOREAN' | 'ENGLISH' | 'MATH' | string;
 type QuestionApiStatus = 'PENDING' | 'ANSWERED' | 'COMPLETED' | string;
 
 type QuestionApiItem = {
-  questionId: number;
-  title: string;
-  subject: QuestionApiSubject;
+  qnaId?: number;
+  questionId?: number;
+  menteeId?: number;
+  title?: string;
+  subject?: QuestionApiSubject;
   status?: QuestionApiStatus;
-  content: string;
+  statusDisplayName?: string;
+  content?: string;
+  attachmentUrl?: string | null;
   answer?: string | null;
+  createTime?: string;
   createdAt?: string;
+  updateTime?: string;
   updatedAt?: string;
+  replies?: Array<{
+    qnaReplyId: number;
+    mentorId?: number;
+    content: string;
+    createTime?: string;
+    updateTime?: string;
+  }>;
 };
 
 type CreateQuestionApiRequest = {
   title: string;
   subject: QuestionApiSubject;
   content: string;
+  attachmentUrl?: string | null;
 };
 
-type UpdateQuestionApiRequest = Partial<CreateQuestionApiRequest> & {
-  status?: QuestionApiStatus;
-  answer?: string | null;
+type UpdateQuestionApiRequest = Partial<CreateQuestionApiRequest>;
+type CreateQuestionReplyApiRequest = {
+  content: string;
+};
+
+export type QuestionReply = {
+  replyId: number;
+  mentorId?: number;
+  content: string;
+  createdAt?: number;
+  updatedAt?: number;
 };
 
 const USE_MOCK = process.env.NEXT_PUBLIC_QUESTION_API_MODE !== 'backend';
-const QUESTION_BASE_PATH = '/domain/questions';
+const QUESTION_BASE_PATH = '/questions';
 
 const SUBJECT_FROM_API: Record<string, QuestionSubject> = {
   KOREAN: '국어',
   ENGLISH: '영어',
   MATH: '수학',
+  ALL: '전체',
 };
 
 const SUBJECT_TO_API: Record<QuestionSubject, QuestionApiSubject> = {
   국어: 'KOREAN',
   영어: 'ENGLISH',
   수학: 'MATH',
+  전체: 'ALL',
 };
 
 const STATUS_FROM_API: Record<string, QuestionStatus> = {
@@ -88,15 +117,28 @@ function toEpochMillis(iso?: string | null): number {
 }
 
 function mapQuestionFromApi(item: QuestionApiItem): Question {
+  const replyText =
+    item.replies && item.replies.length > 0
+      ? item.replies[item.replies.length - 1]?.content
+      : undefined;
+  const statusLabel =
+    item.statusDisplayName || item.status || STATUS_FROM_API[item.status ?? ''] || '답변중';
   return {
-    id: String(item.questionId),
+    id: String(item.qnaId ?? item.questionId ?? ''),
     title: item.title ?? '',
     subject: toQuestionSubject(item.subject),
-    status: toQuestionStatus(item.status),
+    status: toQuestionStatus(statusLabel),
     content: item.content ?? '',
-    answer: item.answer ?? null,
-    createdAt: toEpochMillis(item.createdAt ?? item.updatedAt ?? null),
-    updatedAt: item.updatedAt ? toEpochMillis(item.updatedAt) : undefined,
+    answer: replyText ?? item.answer ?? null,
+    menteeId: item.menteeId,
+    createdAt: toEpochMillis(
+      item.createTime ?? item.createdAt ?? item.updateTime ?? item.updatedAt ?? null
+    ),
+    updatedAt: item.updateTime
+      ? toEpochMillis(item.updateTime)
+      : item.updatedAt
+        ? toEpochMillis(item.updatedAt)
+        : undefined,
   };
 }
 
@@ -129,6 +171,7 @@ export async function createQuestion(input: CreateQuestionInput): Promise<Questi
     title: input.title,
     subject: toApiSubject(input.subject),
     content: input.content,
+    attachmentUrl: null,
   };
 
   const created = await apiFetch<QuestionApiItem>(QUESTION_BASE_PATH, {
@@ -147,17 +190,14 @@ export async function updateQuestion(
 
   const payload: UpdateQuestionApiRequest = {};
   if (patch.title) payload.title = patch.title;
-  if (patch.subject) payload.subject = toApiSubject(patch.subject);
   if (patch.content) payload.content = patch.content;
-  if (patch.status) payload.status = toApiStatus(patch.status);
-  if (patch.answer !== undefined) payload.answer = patch.answer;
 
   if (Object.keys(payload).length === 0) {
     return null;
   }
 
   const updated = await apiFetch<QuestionApiItem>(`${QUESTION_BASE_PATH}/${questionId}`, {
-    method: 'PATCH',
+    method: 'PUT',
     body: JSON.stringify(payload),
   });
 
@@ -170,4 +210,39 @@ export async function deleteQuestion(questionId: string): Promise<void> {
   await apiFetch(`${QUESTION_BASE_PATH}/${questionId}`, {
     method: 'DELETE',
   });
+}
+
+export async function createQuestionReply(
+  input: CreateQuestionReplyInput
+): Promise<QuestionReply> {
+  if (USE_MOCK) return mockApi.createQuestionReply(input.questionId, input.content);
+
+  const payload: CreateQuestionReplyApiRequest = {
+    content: input.content,
+  };
+
+  const reply = await apiFetch<{
+    qnaReplyId: number;
+    mentorId?: number;
+    content: string;
+    createTime?: string;
+    updateTime?: string;
+  }>(`${QUESTION_BASE_PATH}/${input.questionId}/replies`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  const toMillis = (value?: string) => {
+    if (!value) return undefined;
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  return {
+    replyId: reply.qnaReplyId,
+    mentorId: reply.mentorId,
+    content: reply.content,
+    createdAt: toMillis(reply.createTime),
+    updatedAt: toMillis(reply.updateTime),
+  };
 }
