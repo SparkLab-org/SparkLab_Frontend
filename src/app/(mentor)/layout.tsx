@@ -51,7 +51,9 @@ export default function MentorLayout({ children }: { children: React.ReactNode }
       <MentorTopBar />
       <div className="flex w-full flex-col lg:flex-row lg:items-start">
         <MentorSidebar />
-        <main className="flex-1 bg-[#F6F8FA] px-6 py-6">{children}</main>
+        <main className="min-h-screen flex-1 bg-[#F6F8FA] px-6 py-6">
+          {children}
+        </main>
       </div>
     </div>
   );

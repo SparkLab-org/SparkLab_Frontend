@@ -5,9 +5,31 @@ export type AssignmentSubmissionResponse = {
   assignmentId: number;
   menteeId: number;
   imageUrl?: string;
+  fileUrl?: string;
+  attachmentUrl?: string;
   comment?: string;
   status?: string;
   createTime?: string;
+};
+
+export type AssignmentResponse = {
+  assignmentId: number;
+  todoItemId?: number;
+  menteeId?: number;
+  materialTitle?: string;
+  title?: string;
+  subject?: 'KOREAN' | 'ENGLISH' | 'MATH' | 'ALL';
+  targetDate?: string;
+  createTime?: string;
+  submitted?: boolean;
+  latestSubmissionId?: number;
+};
+
+export type MenteeAssignmentsResponse = {
+  menteeId?: number;
+  accountId?: string;
+  activeLevel?: 'NORMAL' | 'WARNING' | 'DANGER';
+  assignments?: AssignmentResponse[];
 };
 
 export type AssignmentSubmissionBatchResponse = {
@@ -24,11 +46,46 @@ function buildQuery(base: string, params: Record<string, string | number | undef
   return query ? `${base}?${query}` : base;
 }
 
+function resolveStoredRole(): 'MENTOR' | 'MENTEE' | null {
+  if (typeof window === 'undefined') return null;
+  const path = window.location?.pathname ?? '';
+  if (path.startsWith('/mentor')) return 'MENTOR';
+  if (
+    path.startsWith('/planner') ||
+    path.startsWith('/assignments') ||
+    path.startsWith('/my') ||
+    path.startsWith('/feedback') ||
+    path.startsWith('/questions')
+  )
+    return 'MENTEE';
+  const stored = window.localStorage.getItem('role');
+  if (!stored) return null;
+  const normalized = stored.toUpperCase();
+  if (normalized === 'MENTOR') return 'MENTOR';
+  if (normalized === 'MENTEE') return 'MENTEE';
+  return null;
+}
+
 function normalizeBatchResponse(
-  response: AssignmentSubmissionBatchResponse | AssignmentSubmissionResponse
+  response:
+    | AssignmentSubmissionBatchResponse
+    | AssignmentSubmissionResponse
+    | AssignmentSubmissionResponse[]
 ): AssignmentSubmissionBatchResponse {
-  if ('submissions' in response) return response;
-  return { submissions: [response] };
+  const normalizeSubmission = (item: AssignmentSubmissionResponse) => {
+    const fallbackUrl =
+      item.imageUrl ?? item.fileUrl ?? item.attachmentUrl;
+    return fallbackUrl ? { ...item, imageUrl: fallbackUrl } : item;
+  };
+  if (Array.isArray(response)) {
+    return { submissions: response.map(normalizeSubmission) };
+  }
+  if ('submissions' in response) {
+    return {
+      submissions: (response.submissions ?? []).map(normalizeSubmission),
+    };
+  }
+  return { submissions: [normalizeSubmission(response)] };
 }
 
 export async function submitAssignment(
@@ -60,9 +117,21 @@ export async function listAssignmentSubmissions(
   assignmentId: number
 ): Promise<AssignmentSubmissionBatchResponse> {
   const response = await apiFetch<
-    AssignmentSubmissionBatchResponse | AssignmentSubmissionResponse
+    AssignmentSubmissionBatchResponse | AssignmentSubmissionResponse | AssignmentSubmissionResponse[]
   >(`/assignments/${assignmentId}/submissions`);
   return normalizeBatchResponse(response);
+}
+
+export async function listAssignments(
+  menteeId?: number
+): Promise<MenteeAssignmentsResponse[]> {
+  const role = resolveStoredRole();
+  const shouldSendMenteeId = role === 'MENTOR' && typeof menteeId === 'number';
+  const query = shouldSendMenteeId ? `?menteeId=${menteeId}` : '';
+  const response = await apiFetch<MenteeAssignmentsResponse[] | MenteeAssignmentsResponse>(
+    `/assignments${query}`
+  );
+  return Array.isArray(response) ? response : [response];
 }
 
 export async function updateAssignmentSubmission(
@@ -75,10 +144,11 @@ export async function updateAssignmentSubmission(
   if (file) formData.append('file', file);
 
   const url = buildQuery(`/assignments/${assignmentId}/submissions/${submissionId}`, { comment });
-  return apiFetch<AssignmentSubmissionResponse>(url, {
+  const response = await apiFetch<AssignmentSubmissionResponse>(url, {
     method: 'PUT',
     body: formData,
   });
+  return normalizeBatchResponse(response).submissions[0] ?? response;
 }
 
 export async function deleteAssignmentSubmission(
@@ -94,10 +164,11 @@ export async function deleteAssignmentSubmissionComment(
   assignmentId: number,
   submissionId: number
 ): Promise<AssignmentSubmissionResponse> {
-  return apiFetch<AssignmentSubmissionResponse>(
+  const response = await apiFetch<AssignmentSubmissionResponse>(
     `/assignments/${assignmentId}/submissions/${submissionId}/comment`,
     {
       method: 'DELETE',
     }
   );
+  return normalizeBatchResponse(response).submissions[0] ?? response;
 }

@@ -1,5 +1,12 @@
 import { apiFetch } from '@/src/services/appClient';
-import { findOrCreateDailyPlan, findOrCreateDailyPlanForMentee } from '@/src/services/dailyPlan.api';
+import {
+  findOrCreateDailyPlan,
+  findOrCreateDailyPlanForMentee,
+  listDailyPlans,
+  listDailyPlansForMentee,
+  type DailyPlanItem,
+  type DailyPlanRangeParams,
+} from '@/src/services/dailyPlan.api';
 import type { Todo, TodoStatus, TodoSubject, TodoType } from '@/src/lib/types/planner';
 import * as mockApi from '@/src/services/todo.mock';
 
@@ -13,6 +20,7 @@ export type CreateTodoInput = {
   assigneeId?: string;
   assigneeName?: string;
   guideFileName?: string;
+  guideFile?: File | null;
   guideFileUrl?: string;
   isFixed?: boolean;
   plannedMinutes?: number;
@@ -50,6 +58,11 @@ export type UpdateTodoInputWithExtras = UpdateTodoInput & UpdateTodoExtras;
 export type ListTodosParams = {
   plannerId?: number;
   planDate?: string; // YYYY-MM-DD
+  menteeId?: number;
+};
+
+export type ListTodosRangeParams = DailyPlanRangeParams & {
+  menteeId?: number;
 };
 
 type TodoApiSubject = 'KOREAN' | 'ENGLISH' | 'MATH' | 'ALL' | string;
@@ -59,6 +72,7 @@ type TodoApiItem = {
   todoItemId: number;
   plannerId?: number;
   assignmentId?: number;
+  materialFileUrl?: string | null;
   targetDate: string;
   title: string;
   subject: TodoApiSubject;
@@ -77,6 +91,18 @@ type TodoApiItem = {
   completedAt?: string | null;
   createTime?: string;
   updateTime?: string;
+};
+
+type DateTodosGroup = {
+  planDate?: string;
+  todos?: TodoApiItem[];
+};
+
+type MenteeTodosResponse = {
+  menteeId?: number;
+  accountId?: string;
+  activeLevel?: string;
+  todosByDate?: DateTodosGroup[];
 };
 
 type CreateTodoApiRequest = {
@@ -103,6 +129,7 @@ type UpdateTodoApiRequest = {
 const USE_MOCK = process.env.NEXT_PUBLIC_TODO_API_MODE !== 'backend';
 const TODO_BASE_PATH = '/todos';
 const TODO_FIXED_PATH = '/todos/fixed';
+const TODO_MENTOR_PATH = '/todos/mentor';
 const DEFAULT_PLANNER_ID = process.env.NEXT_PUBLIC_PLANNER_ID;
 const DAILY_PLAN_CACHE_KEY = 'dailyPlan';
 const DAILY_PLAN_CACHE = new Map<string, number>();
@@ -196,7 +223,28 @@ function isValidDateString(value?: string): value is string {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+function toDateOnly(value?: string | null): string {
+  if (!value) return '';
+  if (isValidDateString(value)) return value;
+  const [datePart] = String(value).split('T');
+  if (isValidDateString(datePart)) return datePart;
+  return String(value);
+}
+
+function getFileNameFromUrl(url?: string | null): string | null {
+  if (!url) return null;
+  try {
+    const trimmed = url.split('?')[0]?.split('#')[0] ?? '';
+    const name = trimmed.split('/').pop();
+    return name ? decodeURIComponent(name) : null;
+  } catch {
+    return null;
+  }
+}
+
 function mapTodoFromApi(item: TodoApiItem): Todo {
+  const materialUrl = item.materialFileUrl ?? item.guideFileUrl ?? null;
+  const resolvedGuideName = item.guideFileName ?? getFileNameFromUrl(materialUrl);
   const base: Todo = {
     id: String(item.todoItemId),
     assignmentId:
@@ -208,8 +256,8 @@ function mapTodoFromApi(item: TodoApiItem): Todo {
     goal: item.goal ?? null,
     assigneeId: item.assigneeId ?? null,
     assigneeName: item.assigneeName ?? null,
-    guideFileName: item.guideFileName ?? null,
-    guideFileUrl: item.guideFileUrl ?? null,
+    guideFileName: resolvedGuideName ?? null,
+    guideFileUrl: materialUrl ?? null,
     status: toTodoStatus(item.status, item.completedAt ?? null),
     subject: toTodoSubject(item.subject),
     studySeconds:
@@ -219,10 +267,181 @@ function mapTodoFromApi(item: TodoApiItem): Todo {
         ? Math.round(item.actualMinutes * 60)
         : Math.round((item.plannedMinutes ?? 0) * 60),
     createdAt: toEpochMillis(item.createTime ?? item.updateTime ?? item.completedAt ?? null),
-    dueDate: item.targetDate ?? '',
+    dueDate: toDateOnly(item.targetDate),
     dueTime: toTimeHHmm(item.completedAt ?? item.updateTime ?? item.createTime ?? null),
   };
   return applyTodoMeta(base);
+}
+
+function mapMentorTodosResponse(payload: MenteeTodosResponse[]): Todo[] {
+  if (!Array.isArray(payload)) return [];
+  const result: Todo[] = [];
+  payload.forEach((mentee) => {
+    const menteeId = mentee.menteeId !== undefined ? String(mentee.menteeId) : '';
+    const menteeName = mentee.accountId ?? '';
+    const groups = Array.isArray(mentee.todosByDate) ? mentee.todosByDate : [];
+    groups.forEach((group) => {
+      const planDate = toDateOnly(group.planDate ?? null);
+      const todos = Array.isArray(group.todos) ? group.todos : [];
+      todos.forEach((item) => {
+        const mapped = mapTodoFromApi(item);
+        const normalizedDueDate = isValidDateString(mapped.dueDate)
+          ? mapped.dueDate
+          : planDate || mapped.dueDate;
+        result.push({
+          ...mapped,
+          dueDate: normalizedDueDate,
+          assigneeId: menteeId || mapped.assigneeId,
+          assigneeName: menteeName || mapped.assigneeName,
+        });
+      });
+    });
+  });
+  return result;
+}
+
+function extractTodosFromDailyPlanItem(item: DailyPlanItem): {
+  todos: TodoApiItem[];
+  planDate?: string;
+  hasTodosField: boolean;
+} {
+  const rawPlanDate =
+    (item as { planDate?: string }).planDate ??
+    (item as { date?: string }).date ??
+    (item as { targetDate?: string }).targetDate;
+  const planDate = toDateOnly(rawPlanDate ?? null);
+  const rawTodos =
+    (item as { todos?: TodoApiItem[] }).todos ??
+    (item as { todoItems?: TodoApiItem[] }).todoItems ??
+    (item as { items?: TodoApiItem[] }).items ??
+    null;
+  if (!Array.isArray(rawTodos)) {
+    return { todos: [], planDate, hasTodosField: false };
+  }
+  const todos = rawTodos.filter(
+    (entry): entry is TodoApiItem =>
+      Boolean(entry) && typeof entry.todoItemId === 'number'
+  );
+  return { todos, planDate, hasTodosField: true };
+}
+
+function mapDailyPlanItemsToTodos(items: DailyPlanItem[]): {
+  todos: Todo[];
+  hasTodosField: boolean;
+  hasAnyTodos: boolean;
+} {
+  const result: Todo[] = [];
+  let hasTodosField = false;
+  let hasAnyTodos = false;
+
+  items.forEach((item) => {
+    const grouped = (item as { todosByDate?: DateTodosGroup[] }).todosByDate;
+    if (Array.isArray(grouped)) {
+      hasTodosField = true;
+      grouped.forEach((group) => {
+        const planDate = toDateOnly(group.planDate ?? null);
+        const todos = Array.isArray(group.todos) ? group.todos : [];
+        todos.forEach((entry) => {
+          if (!entry || typeof entry.todoItemId !== 'number') return;
+          const mapped = mapTodoFromApi(entry);
+          const normalizedDueDate = isValidDateString(mapped.dueDate)
+            ? mapped.dueDate
+            : planDate || mapped.dueDate;
+          hasAnyTodos = true;
+          result.push({
+            ...mapped,
+            dueDate: normalizedDueDate,
+          });
+        });
+      });
+      return;
+    }
+
+    const extracted = extractTodosFromDailyPlanItem(item);
+    if (extracted.hasTodosField) {
+      hasTodosField = true;
+    }
+    extracted.todos.forEach((entry) => {
+      const mapped = mapTodoFromApi(entry);
+      const normalizedDueDate = isValidDateString(mapped.dueDate)
+        ? mapped.dueDate
+        : extracted.planDate || mapped.dueDate;
+      hasAnyTodos = true;
+      result.push({
+        ...mapped,
+        dueDate: normalizedDueDate,
+      });
+    });
+  });
+
+  return { todos: result, hasTodosField, hasAnyTodos };
+}
+
+function extractDailyPlanIds(items: DailyPlanItem[]): Map<number, string | undefined> {
+  const map = new Map<number, string | undefined>();
+  items.forEach((item) => {
+    const rawTodos = (item as { todos?: unknown }).todos;
+    if (Array.isArray(rawTodos) && rawTodos.length === 0) {
+      return;
+    }
+    const id =
+      (item as { dailyPlanId?: number }).dailyPlanId ??
+      (item as { planId?: number }).planId ??
+      (item as { id?: number }).id;
+    if (typeof id !== 'number' || !Number.isFinite(id)) return;
+    const rawPlanDate =
+      (item as { planDate?: string }).planDate ??
+      (item as { date?: string }).date ??
+      (item as { targetDate?: string }).targetDate;
+    const planDate = toDateOnly(rawPlanDate ?? null);
+    map.set(id, planDate || rawPlanDate);
+  });
+  return map;
+}
+
+async function fetchTodosByPlannerIds(
+  plannerIds: Map<number, string | undefined>
+): Promise<Todo[]> {
+  const ids = Array.from(plannerIds.keys());
+  if (ids.length === 0) return [];
+  const concurrency = 6;
+  let cursor = 0;
+  const results: TodoApiItem[][] = new Array(ids.length);
+
+  async function worker() {
+    while (cursor < ids.length) {
+      const index = cursor++;
+      const plannerId = ids[index];
+      try {
+        const query = buildListQuery({ plannerId });
+        const items = await apiFetch<TodoApiItem[]>(`${TODO_BASE_PATH}${query}`);
+        results[index] = items;
+      } catch {
+        results[index] = [];
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, ids.length) }, () => worker())
+  );
+
+  const mapped: Todo[] = [];
+  results.forEach((items, index) => {
+    const plannerId = ids[index];
+    const planDate = plannerIds.get(plannerId);
+    items.forEach((item) => {
+      const todo = mapTodoFromApi(item);
+      const normalizedDueDate = isValidDateString(todo.dueDate)
+        ? todo.dueDate
+        : planDate || todo.dueDate;
+      mapped.push({
+        ...todo,
+        dueDate: normalizedDueDate,
+      });
+    });
+  });
+  return mapped;
 }
 
 function resolvePlannerId(): number | undefined {
@@ -250,12 +469,21 @@ function resolvePlannerId(): number | undefined {
 
 function resolveStoredRole(): 'MENTEE' | 'MENTOR' | null {
   if (typeof window === 'undefined') return null;
+  const path = window.location?.pathname ?? '';
+  if (path.startsWith('/mentor')) return 'MENTOR';
+  if (
+    path.startsWith('/planner') ||
+    path.startsWith('/my') ||
+    path.startsWith('/feedback') ||
+    path.startsWith('/questions') ||
+    path.startsWith('/assignments')
+  ) {
+    return 'MENTEE';
+  }
   const raw = window.localStorage.getItem('role');
   if (raw && raw.trim().length > 0) {
     return raw.toUpperCase() === 'MENTEE' ? 'MENTEE' : 'MENTOR';
   }
-  const path = window.location?.pathname ?? '';
-  if (path.startsWith('/mentor')) return 'MENTOR';
   return null;
 }
 
@@ -504,6 +732,58 @@ function buildListQuery(params: ListTodosParams): string {
   } else if (params.planDate) {
     search.set('planDate', params.planDate);
   }
+  if (typeof params.menteeId === 'number' && params.menteeId > 0) {
+    search.set('menteeId', String(params.menteeId));
+  }
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
+
+function buildFixedCreateQuery(params: CreateTodoApiRequest): string {
+  const search = new URLSearchParams();
+  search.set('plannerId', String(params.plannerId));
+  search.set('title', params.title);
+  if (params.targetDate) search.set('targetDate', params.targetDate);
+  if (params.subject) search.set('subject', params.subject);
+  if (params.type) search.set('type', params.type);
+  if (typeof params.plannedMinutes === 'number') {
+    search.set('plannedMinutes', String(params.plannedMinutes));
+  }
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
+
+function isTodoApiItemLike(value: unknown): value is TodoApiItem {
+  return Boolean(
+    value && typeof value === 'object' && typeof (value as { todoItemId?: unknown }).todoItemId === 'number'
+  );
+}
+
+function normalizeTodoListResponse(payload: unknown): TodoApiItem[] {
+  if (Array.isArray(payload)) {
+    return payload.filter(isTodoApiItemLike);
+  }
+  if (!payload || typeof payload !== 'object') return [];
+  const candidates = [
+    (payload as { todos?: unknown }).todos,
+    (payload as { todoItems?: unknown }).todoItems,
+    (payload as { items?: unknown }).items,
+    (payload as { data?: unknown }).data,
+  ];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate.filter(isTodoApiItemLike);
+    }
+  }
+  return [];
+}
+
+function buildMentorListQuery(params: Pick<ListTodosParams, 'planDate' | 'menteeId'>): string {
+  const search = new URLSearchParams();
+  if (params.planDate) search.set('planDate', params.planDate);
+  if (typeof params.menteeId === 'number' && params.menteeId > 0) {
+    search.set('menteeId', String(params.menteeId));
+  }
   const query = search.toString();
   return query ? `?${query}` : '';
 }
@@ -521,6 +801,21 @@ export async function listTodos(params: ListTodosParams = {}): Promise<Todo[]> {
   const storedAccountId =
     typeof window !== 'undefined' ? window.localStorage.getItem('accountId') : null;
   const isMentee = storedRole === 'MENTEE' || (!storedRole && Boolean(storedMenteeId));
+  const menteeIdParam =
+    typeof params.menteeId === 'number'
+      ? params.menteeId
+      : isMentee
+      ? resolveNumericId(storedMenteeId)
+      : undefined;
+
+  if (storedRole === 'MENTOR') {
+    const query = buildMentorListQuery({
+      planDate: params.planDate,
+      menteeId: menteeIdParam,
+    });
+    const response = await apiFetch<MenteeTodosResponse[]>(`${TODO_MENTOR_PATH}${query}`);
+    return mapMentorTodosResponse(response);
+  }
 
   const dailyPlanId = isMentee
     ? await resolveDailyPlanId(params.planDate, storedMenteeId, {
@@ -528,13 +823,35 @@ export async function listTodos(params: ListTodosParams = {}): Promise<Todo[]> {
       })
     : undefined;
   const plannerId = params.plannerId ?? dailyPlanId;
-  if (isMentee && params.planDate && !plannerId && !params.plannerId) {
+  if (
+    isMentee &&
+    params.planDate &&
+    !plannerId &&
+    !params.plannerId &&
+    typeof menteeIdParam !== 'number'
+  ) {
     return [];
   }
-  const query = buildListQuery({ plannerId, planDate: params.planDate });
+  const query = buildListQuery({
+    plannerId,
+    planDate: params.planDate,
+    menteeId: menteeIdParam,
+  });
   try {
-    const items = await apiFetch<TodoApiItem[]>(`${TODO_BASE_PATH}${query}`);
-    return items.map(mapTodoFromApi);
+    const response = await apiFetch<unknown>(`${TODO_BASE_PATH}${query}`);
+    if (response && typeof response === 'object') {
+      if (Array.isArray((response as MenteeTodosResponse).todosByDate)) {
+        return mapMentorTodosResponse([response as MenteeTodosResponse]);
+      }
+      const normalized = normalizeTodoListResponse(response);
+      if (normalized.length > 0) {
+        return normalized.map(mapTodoFromApi);
+      }
+    }
+    if (Array.isArray(response)) {
+      return response.map(mapTodoFromApi);
+    }
+    return [];
   } catch (error) {
     if (isMentee) {
       return [];
@@ -545,6 +862,46 @@ export async function listTodos(params: ListTodosParams = {}): Promise<Todo[]> {
       return items.map(mapTodoFromApi);
     }
     throw error;
+  }
+}
+
+export async function listTodosByRange(
+  params: ListTodosRangeParams
+): Promise<{ todos: Todo[]; hasTodosField: boolean }> {
+  if (USE_MOCK) {
+    return { todos: mockApi.listTodos(), hasTodosField: true };
+  }
+  const storedRole = resolveStoredRole();
+  const storedMenteeId =
+    typeof window !== 'undefined' ? window.localStorage.getItem('menteeId') : null;
+  const resolvedMenteeId =
+    typeof params.menteeId === 'number'
+      ? params.menteeId
+      : resolveNumericId(storedMenteeId);
+  try {
+    let items: DailyPlanItem[] = [];
+    try {
+      items =
+        storedRole === 'MENTOR'
+          ? typeof params.menteeId === 'number'
+            ? await listDailyPlansForMentee(params.menteeId, params)
+            : await listDailyPlans(params)
+          : await listDailyPlans(params);
+    } catch {
+      items = await listDailyPlans(params);
+    }
+    const mapped = mapDailyPlanItemsToTodos(items);
+    if (mapped.hasTodosField && mapped.hasAnyTodos) {
+      return { todos: mapped.todos, hasTodosField: true };
+    }
+    const plannerIds = extractDailyPlanIds(items);
+    if (plannerIds.size > 0) {
+      const fetched = await fetchTodosByPlannerIds(plannerIds);
+      return { todos: fetched, hasTodosField: true };
+    }
+    return { todos: mapped.todos, hasTodosField: false };
+  } catch {
+    return { todos: [], hasTodosField: false };
   }
 }
 
@@ -604,10 +961,11 @@ export async function createTodo(input: CreateTodoInput): Promise<Todo> {
   });
 
   const mapped = mapTodoFromApi(created);
-  if (input.goal || input.guideFileName || input.assigneeId || input.assigneeName) {
+  const resolvedGuideFileName = input.guideFileName ?? input.guideFile?.name;
+  if (input.goal || resolvedGuideFileName || input.assigneeId || input.assigneeName) {
     writeTodoMeta(mapped.id, {
       goal: input.goal ?? null,
-      guideFileName: input.guideFileName ?? null,
+      guideFileName: resolvedGuideFileName ?? null,
       assigneeId: input.assigneeId ?? null,
       assigneeName: input.assigneeName ?? null,
     });
@@ -708,10 +1066,20 @@ export async function createFixedTodo(input: CreateTodoInput): Promise<Todo> {
     payload.plannedMinutes = input.plannedMinutes;
   }
 
-  const created = await apiFetch<TodoApiItem>(TODO_FIXED_PATH, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  const hasGuideFile = typeof window !== 'undefined' && input.guideFile instanceof File;
+  const created = hasGuideFile
+    ? await apiFetch<TodoApiItem>(`${TODO_FIXED_PATH}${buildFixedCreateQuery(payload)}`, {
+        method: 'POST',
+        body: (() => {
+          const formData = new FormData();
+          formData.append('file', input.guideFile as File);
+          return formData;
+        })(),
+      })
+    : await apiFetch<TodoApiItem>(TODO_FIXED_PATH, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
 
   const mapped = mapTodoFromApi(created);
   if (input.goal || input.guideFileName || input.assigneeId || input.assigneeName) {

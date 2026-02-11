@@ -1,7 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useTodosQuery } from '@/src/hooks/todoQueries';
+import { useAuthMeQuery } from '@/src/hooks/authQueries';
+import {
+  mapAssignmentToTodo,
+  useMenteeAssignmentsQuery,
+} from '@/src/hooks/assignmentQueries';
 import { usePlannerStore } from '@/src/store/plannerStore';
 import type { TodoSubject } from '@/src/lib/types/planner';
 import AssignmentItem from './AssignmentItem';
@@ -15,19 +19,33 @@ type Props = {
 
 export default function AssignmentList({ hideFilters = false, hideTitle = false }: Props) {
   const selectedDate = usePlannerStore((s) => s.selectedDate);
-  const { data: todos = [] } = useTodosQuery({ planDate: selectedDate });
+  const { data: me } = useAuthMeQuery();
+  const menteeId = typeof me?.menteeId === 'number' ? me.menteeId : undefined;
+  const { data: assignmentGroups = [] } = useMenteeAssignmentsQuery({ menteeId });
   const [activeSubject, setActiveSubject] = useState<SubjectFilter>('전체');
 
   const subjects: SubjectFilter[] = ['전체', '국어', '수학', '영어'];
 
   const assignments = useMemo(() => {
-    return todos.filter((todo) => todo.isFixed && todo.dueDate === selectedDate);
-  }, [todos, selectedDate]);
+    return assignmentGroups.flatMap((group) =>
+      (group.assignments ?? []).map((assignment) =>
+        mapAssignmentToTodo(assignment, {
+          accountId: group.accountId,
+          menteeId: group.menteeId,
+        })
+      )
+    );
+  }, [assignmentGroups]);
+
+  const filteredByDate = useMemo(() => {
+    if (!selectedDate) return assignments;
+    return assignments.filter((todo) => todo.dueDate === selectedDate);
+  }, [assignments, selectedDate]);
 
   const filtered = useMemo(() => {
-    if (activeSubject === '전체') return assignments;
-    return assignments.filter((todo) => todo.subject === activeSubject);
-  }, [assignments, activeSubject]);
+    if (activeSubject === '전체') return filteredByDate;
+    return filteredByDate.filter((todo) => todo.subject === activeSubject);
+  }, [filteredByDate, activeSubject]);
 
   return (
     <section className="space-y-5">

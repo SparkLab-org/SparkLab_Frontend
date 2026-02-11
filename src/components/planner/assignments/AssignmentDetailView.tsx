@@ -3,6 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTodoDetailQuery, useUpdateTodoMutation } from '@/src/hooks/todoQueries';
+import { useAuthMeQuery } from '@/src/hooks/authQueries';
+import {
+  mapAssignmentToTodo,
+  useMenteeAssignmentsQuery,
+} from '@/src/hooks/assignmentQueries';
 import { getTodoStatusLabel, isOverdueTask } from '@/src/lib/utils/todoStatus';
 import AssignmentSubmissionCard from './AssignmentSubmissionCard';
 import AssignmentAttachmentCard from '../list/listdetail/AssignmentAttachmentCard';
@@ -22,7 +27,10 @@ type Props = {
 
 export default function AssignmentDetailView({ todoId }: Props) {
   const router = useRouter();
-  const { data: todo, isLoading } = useTodoDetailQuery(todoId);
+  const { data: detailTodo, isLoading } = useTodoDetailQuery(todoId);
+  const { data: me } = useAuthMeQuery();
+  const menteeId = typeof me?.menteeId === 'number' ? me.menteeId : undefined;
+  const { data: assignmentGroups = [] } = useMenteeAssignmentsQuery({ menteeId });
   const updateTodoMutation = useUpdateTodoMutation();
   const [submittedAt, setSubmittedAt] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -35,6 +43,29 @@ export default function AssignmentDetailView({ todoId }: Props) {
   const openPanel = useTimerStore((s) => s.openPanel);
   const setActiveTodoId = useTimerStore((s) => s.setActiveTodoId);
 
+  const resolvedTodoId = Number(todoId);
+  const assignmentMatch = assignmentGroups
+    .flatMap((group) => group.assignments ?? [])
+    .find((assignment) => {
+      if (Number.isFinite(resolvedTodoId)) {
+        return (
+          assignment.assignmentId === resolvedTodoId ||
+          assignment.todoItemId === resolvedTodoId
+        );
+      }
+      return false;
+    });
+  const listTodo = assignmentMatch
+    ? mapAssignmentToTodo(assignmentMatch, {
+        accountId:
+          assignmentGroups.find((group) =>
+            (group.assignments ?? []).includes(assignmentMatch)
+          )?.accountId ?? undefined,
+        menteeId: assignmentMatch.menteeId ?? menteeId,
+      })
+    : null;
+  const todo = detailTodo ?? listTodo;
+
   const statusLabel = todo ? getTodoStatusLabel(todo) : '';
   const isLate = todo ? isOverdueTask(todo) : false;
   const isDone = todo?.status === 'DONE';
@@ -42,7 +73,11 @@ export default function AssignmentDetailView({ todoId }: Props) {
   const storageKey = todo ? `assignment-submission:${todo.id}` : null;
 
   const resolveAssignmentId = () => {
-    if (!todo) return undefined;
+    if (assignmentMatch?.assignmentId) return assignmentMatch.assignmentId;
+    if (!todo) {
+      const fallback = Number(todoId);
+      return Number.isFinite(fallback) ? fallback : undefined;
+    }
     const fromTodo = Number((todo as { assignmentId?: number | string }).assignmentId);
     if (Number.isFinite(fromTodo)) return fromTodo;
     if (typeof window !== 'undefined') {
@@ -91,7 +126,6 @@ export default function AssignmentDetailView({ todoId }: Props) {
   };
 
   useEffect(() => {
-    if (!todo) return;
     const assignmentId = resolveAssignmentId();
     if (!assignmentId) return;
     if (lastSubmission && lastSubmission.imageUrl) return;
@@ -119,10 +153,9 @@ export default function AssignmentDetailView({ todoId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [todo, lastSubmission]);
+  }, [todo, assignmentMatch?.assignmentId, lastSubmission]);
 
   const handleSubmit = (comment: string, files: File[]) => {
-    if (!todo) return;
     const assignmentId = resolveAssignmentId();
     if (!assignmentId) {
       setSubmitError('assignmentId를 찾지 못했습니다.');
@@ -141,25 +174,35 @@ export default function AssignmentDetailView({ todoId }: Props) {
             if (!Number.isNaN(parsed)) setSubmittedAt(parsed);
           }
         }
-        updateTodoMutation.mutate(
-          {
-            id: todo.id,
-            patch: { status: 'DONE', completedAt: new Date().toISOString() },
-            isFixed: todo.isFixed,
-          },
-          {
-            onSuccess: () => {
-              if (!latest) {
-                setSubmittedAt(Date.now());
-              }
-              setIsSubmitting(false);
+        const todoIdForUpdate =
+          detailTodo?.id ??
+          (assignmentMatch?.todoItemId ? String(assignmentMatch.todoItemId) : null);
+        if (todoIdForUpdate) {
+          updateTodoMutation.mutate(
+            {
+              id: todoIdForUpdate,
+              patch: { status: 'DONE', completedAt: new Date().toISOString() },
+              isFixed: true,
             },
-            onError: () => {
-              setSubmitError('제출 상태 업데이트에 실패했습니다.');
-              setIsSubmitting(false);
-            },
-          }
-        );
+            {
+              onSuccess: () => {
+                if (!latest) {
+                  setSubmittedAt(Date.now());
+                }
+                setIsSubmitting(false);
+              },
+              onError: () => {
+                setSubmitError('제출 상태 업데이트에 실패했습니다.');
+                setIsSubmitting(false);
+              },
+            }
+          );
+          return;
+        }
+        if (!latest) {
+          setSubmittedAt(Date.now());
+        }
+        setIsSubmitting(false);
       })
       .catch(() => {
         setSubmitError('과제 제출에 실패했습니다.');
@@ -168,7 +211,7 @@ export default function AssignmentDetailView({ todoId }: Props) {
   };
 
   const handleUpdateComment = () => {
-    if (!todo || !lastSubmission) return;
+    if (!lastSubmission) return;
     const assignmentId = resolveAssignmentId();
     if (!assignmentId) {
       setSubmitError('assignmentId를 찾지 못했습니다.');
@@ -199,7 +242,7 @@ export default function AssignmentDetailView({ todoId }: Props) {
   };
 
   const handleUpdateFile = (file: File) => {
-    if (!todo || !lastSubmission) return;
+    if (!lastSubmission) return;
     const assignmentId = resolveAssignmentId();
     if (!assignmentId) {
       setSubmitError('assignmentId를 찾지 못했습니다.');
@@ -225,7 +268,7 @@ export default function AssignmentDetailView({ todoId }: Props) {
   };
 
   const handleDeleteComment = () => {
-    if (!todo || !lastSubmission) return;
+    if (!lastSubmission) return;
     const assignmentId = resolveAssignmentId();
     if (!assignmentId) {
       setSubmitError('assignmentId를 찾지 못했습니다.');
@@ -246,7 +289,7 @@ export default function AssignmentDetailView({ todoId }: Props) {
   };
 
   const handleDeleteSubmission = () => {
-    if (!todo || !lastSubmission) return;
+    if (!lastSubmission) return;
     const assignmentId = resolveAssignmentId();
     if (!assignmentId) {
       setSubmitError('assignmentId를 찾지 못했습니다.');

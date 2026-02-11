@@ -88,10 +88,11 @@ export default function MentorFeedbackView() {
       list: Todo[],
       grade?: string
     ): MenteeCard => {
-      const studyTodos = list.filter((todo) => todo.type !== '과제');
-      const assignmentTodos = list.filter((todo) => todo.type === '과제');
-      const feedbackRequests = list.filter(
-        (todo) => todo.status === 'DONE' && !hasFeedbackForTodo(todo, feedbackByTodoId)
+      const completedTodos = list.filter((todo) => todo.status === 'DONE');
+      const studyTodos = completedTodos.filter((todo) => todo.type !== '과제');
+      const assignmentTodos = completedTodos.filter((todo) => todo.type === '과제');
+      const feedbackRequests = completedTodos.filter(
+        (todo) => !hasFeedbackForTodo(todo, feedbackByTodoId)
       ).length;
       return {
         id,
@@ -240,20 +241,9 @@ export default function MentorFeedbackView() {
   ]);
 
   const displayTodos = useMemo(() => {
-    const merged = new Map<string, Todo>();
-    menteeTodos.forEach((todo) => {
-      merged.set(String(todo.id), todo);
-    });
-    todoStatusTodos.forEach((todo) => {
-      const existing = merged.get(String(todo.id));
-      if (!existing || existing.status !== 'DONE') {
-        merged.set(String(todo.id), todo);
-      }
-    });
-    if (merged.size === 0) {
-      fallbackTodos.forEach((todo) => merged.set(String(todo.id), todo));
-    }
-    return Array.from(merged.values());
+    if (menteeTodos.length > 0) return menteeTodos;
+    if (todoStatusTodos.length > 0) return todoStatusTodos;
+    return fallbackTodos;
   }, [menteeTodos, todoStatusTodos, fallbackTodos]);
 
   const filterByType = (list: Todo[]) => {
@@ -281,10 +271,6 @@ export default function MentorFeedbackView() {
   const selectedFeedback = selectedTodo
     ? feedbackByTodoId.get(String(selectedTodo.id))
     : undefined;
-
-  const doneCount = displayTodos.filter((todo) => todo.status === 'DONE').length;
-  const progressPercent =
-    displayTodos.length > 0 ? Math.round((doneCount / displayTodos.length) * 100) : 0;
 
   const feedbackText =
     selectedFeedback?.content?.trim() ||
@@ -417,7 +403,6 @@ export default function MentorFeedbackView() {
 
         <MentorFeedbackDetailPanel
           todo={selectedTodo}
-          progressPercent={progressPercent}
           feedbackText={feedbackText}
           feedbackId={selectedFeedback?.id}
           onOpenModal={handleOpenModal}

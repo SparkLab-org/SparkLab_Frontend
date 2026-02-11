@@ -17,46 +17,38 @@ type DailyPlanResponse = {
   created?: boolean;
 };
 
+export type DailyPlanItem = {
+  dailyPlanId?: number;
+  menteeId?: number;
+  planDate?: string;
+  comment?: string | null;
+  [key: string]: unknown;
+};
+
+export type DailyPlanRangeParams = {
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+};
+
+function buildRangeQuery(params: DailyPlanRangeParams): string {
+  const search = new URLSearchParams();
+  if (params.startDate) search.set('startDate', params.startDate);
+  if (params.endDate) search.set('endDate', params.endDate);
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
+
 export async function findOrCreateDailyPlan(
   input: DailyPlanCreateRequest
 ): Promise<DailyPlanResponse> {
-  try {
-    return await apiFetch<DailyPlanResponse>('/dailyPlan', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    });
-  } catch (error) {
-    const status = (error as { status?: number }).status;
-    if (status === 400) {
-      if (typeof input.menteeId === 'number') {
-        const { menteeId, ...rest } = input;
-        try {
-          return await apiFetch<DailyPlanResponse>('/dailyPlan', {
-            method: 'POST',
-            body: JSON.stringify(rest),
-          });
-        } catch (fallbackError) {
-          const fallbackStatus = (fallbackError as { status?: number }).status;
-          if (fallbackStatus === 400 && input.accountId) {
-            const { accountId, ...restNoAccount } = rest;
-            return apiFetch<DailyPlanResponse>('/dailyPlan', {
-              method: 'POST',
-              body: JSON.stringify(restNoAccount),
-            });
-          }
-          throw fallbackError;
-        }
-      }
-      if (input.accountId) {
-        const { accountId, ...rest } = input;
-        return apiFetch<DailyPlanResponse>('/dailyPlan', {
-          method: 'POST',
-          body: JSON.stringify(rest),
-        });
-      }
-    }
-    throw error;
-  }
+  const payload = {
+    ...(input.planDate ? { planDate: input.planDate } : {}),
+    ...(input.comment ? { comment: input.comment } : {}),
+  };
+  return apiFetch<DailyPlanResponse>('/dailyPlan', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function findOrCreateDailyPlanForMentee(
@@ -81,4 +73,27 @@ export async function updateDailyPlanComment(
     method: 'PUT',
     body: JSON.stringify(input),
   });
+}
+
+export async function listDailyPlans(params: DailyPlanRangeParams): Promise<DailyPlanItem[]> {
+  const query = buildRangeQuery(params);
+  if (!query) return [];
+  return apiFetch<DailyPlanItem[]>(`/dailyPlan${query}`);
+}
+
+export async function listDailyPlansForMentee(
+  menteeId: number,
+  params: DailyPlanRangeParams
+): Promise<DailyPlanItem[]> {
+  const query = buildRangeQuery(params);
+  if (!query) return [];
+  return apiFetch<DailyPlanItem[]>(`/dailyPlan/mentees/${menteeId}${query}`);
+}
+
+export async function getTodayDailyPlan(): Promise<DailyPlanItem | null> {
+  try {
+    return await apiFetch<DailyPlanItem>('/dailyPlan/today');
+  } catch {
+    return null;
+  }
 }

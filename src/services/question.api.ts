@@ -6,10 +6,11 @@ export type CreateQuestionInput = {
   title: string;
   subject: QuestionSubject;
   content: string;
+  attachmentUrl?: string | null;
 };
 
 export type UpdateQuestionInput = Partial<
-  Pick<Question, 'title' | 'subject' | 'status' | 'content' | 'answer'>
+  Pick<Question, 'title' | 'subject' | 'status' | 'content' | 'answer' | 'attachmentUrl'>
 >;
 
 export type CreateQuestionReplyInput = {
@@ -130,6 +131,7 @@ function mapQuestionFromApi(item: QuestionApiItem): Question {
     status: toQuestionStatus(statusLabel),
     content: item.content ?? '',
     answer: replyText ?? item.answer ?? null,
+    attachmentUrl: item.attachmentUrl ?? null,
     menteeId: item.menteeId,
     createdAt: toEpochMillis(
       item.createTime ?? item.createdAt ?? item.updateTime ?? item.updatedAt ?? null
@@ -171,7 +173,7 @@ export async function createQuestion(input: CreateQuestionInput): Promise<Questi
     title: input.title,
     subject: toApiSubject(input.subject),
     content: input.content,
-    attachmentUrl: null,
+    attachmentUrl: input.attachmentUrl ?? null,
   };
 
   const created = await apiFetch<QuestionApiItem>(QUESTION_BASE_PATH, {
@@ -191,6 +193,7 @@ export async function updateQuestion(
   const payload: UpdateQuestionApiRequest = {};
   if (patch.title) payload.title = patch.title;
   if (patch.content) payload.content = patch.content;
+  if (patch.attachmentUrl !== undefined) payload.attachmentUrl = patch.attachmentUrl;
 
   if (Object.keys(payload).length === 0) {
     return null;

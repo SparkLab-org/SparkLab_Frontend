@@ -5,6 +5,7 @@ import {
   addDays,
   addMonths,
   addWeeks,
+  endOfMonth,
   format,
   startOfMonth,
   startOfWeek,
@@ -82,14 +83,29 @@ export default function PlannerCalendar({}: Props) {
     [selectedDate],
   );
 
-  const viewDateKeys = useMemo(
-    () =>
-      (view === "week" ? weekDays : monthCells).map((day) =>
-        format(day, "yyyy-MM-dd")
-      ),
-    [view, weekDays, monthCells]
-  );
-  const { data: todos = [] } = useTodosRangeQuery(viewDateKeys);
+  const monthRange = useMemo(() => {
+    const monthStart = startOfMonth(selectedDate);
+    const monthEnd = endOfMonth(selectedDate);
+    return {
+      start: format(monthStart, "yyyy-MM-dd"),
+      end: format(monthEnd, "yyyy-MM-dd"),
+    };
+  }, [selectedDate]);
+  const monthDateKeys = useMemo(() => {
+    const dates: string[] = [];
+    let cursor = startOfMonth(selectedDate);
+    const end = endOfMonth(selectedDate);
+    while (cursor <= end) {
+      dates.push(format(cursor, "yyyy-MM-dd"));
+      cursor = addDays(cursor, 1);
+    }
+    return dates;
+  }, [selectedDate]);
+  const { data: todos = [] } = useTodosRangeQuery(monthDateKeys, {
+    rangeStart: monthRange.start,
+    rangeEnd: monthRange.end,
+    scope: 'planner-calendar',
+  });
 
   /** ✅ 헤더 텍스트 */
   const headerText = useMemo(() => {

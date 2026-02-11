@@ -17,6 +17,7 @@ export default function QuestionForm({ basePath = '/planner/question' }: Props) 
   const [subject, setSubject] = useState<QuestionSubject>('수학');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [attachmentUrl, setAttachmentUrl] = useState('');
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -24,7 +25,12 @@ export default function QuestionForm({ basePath = '/planner/question' }: Props) 
     const trimmedContent = content.trim();
     if (!trimmedTitle || !trimmedContent) return;
     createQuestionMutation.mutate(
-      { title: trimmedTitle, subject, content: trimmedContent },
+      {
+        title: trimmedTitle,
+        subject,
+        content: trimmedContent,
+        attachmentUrl: attachmentUrl.trim() ? attachmentUrl.trim() : null,
+      },
       {
         onSuccess: () => {
           router.push(basePath);
@@ -83,10 +89,15 @@ export default function QuestionForm({ basePath = '/planner/question' }: Props) 
         <div className="space-y-2">
           <label className="text-xs font-semibold text-neutral-600">자료 첨부</label>
           <input
-            type="file"
-            multiple
-            className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-600"
+            type="url"
+            placeholder="첨부 링크(URL)를 입력하세요 (선택)"
+            value={attachmentUrl}
+            onChange={(event) => setAttachmentUrl(event.target.value)}
+            className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900"
           />
+          <p className="text-[11px] text-neutral-400">
+            현재는 링크 첨부만 지원합니다.
+          </p>
         </div>
 
         <button

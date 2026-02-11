@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { User } from 'lucide-react';
+import Link from 'next/link';
 import seolStudyIcon from '@/src/assets/icons/seolStudy.svg';
 import bellIcon from '@/src/assets/icons/bell.svg';
+import sendIcon from '@/src/assets/icons/send.svg';
 import { useNotificationsQuery } from '@/src/hooks/notificationQueries';
 import NotificationEmpty from '@/src/components/planner/notifications/NotificationEmpty';
 import NotificationList from '@/src/components/planner/notifications/NotificationList';
@@ -66,6 +68,7 @@ export default function MentorTopBar() {
     return formatter.format(new Date());
   }, []);
   const brandIconSrc = typeof seolStudyIcon === 'string' ? seolStudyIcon : seolStudyIcon?.src;
+  const sendIconSrc = typeof sendIcon === 'string' ? sendIcon : sendIcon?.src;
   const hasUnread = notifications.some(
     (item) => !item.isRead && !readIds.has(item.id)
   );
@@ -106,17 +109,31 @@ export default function MentorTopBar() {
     <header className="border-b border-[#F5F5F5] bg-white">
       <div className="flex w-full flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-6">
         <div className="flex items-center justify-between sm:justify-start sm:gap-6">
-          <div className="flex items-center gap-2">
+          <Link href="/mentor/mentee" className="flex items-center gap-2">
             {brandIconSrc ? (
               <img src={brandIconSrc} alt="설스터디" className="h-7 w-7" />
             ) : null}
             <div className="text-lg font-semibold text-neutral-900 sm:text-xl">설스터디</div>
-          </div>
+          </Link>
           <div className="text-sm font-semibold text-neutral-900 sm:text-[16px]">
             {dateLabel}
           </div>
         </div>
         <div className="flex items-center justify-between gap-3 sm:ml-auto sm:justify-end">
+          <Link
+            href="/mentor/question"
+            className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] px-3 py-2 text-xs font-semibold text-white"
+          >
+            {sendIconSrc ? (
+              <img
+                className="h-4 w-4 invert brightness-0"
+                src={sendIconSrc}
+                alt=""
+                aria-hidden
+              />
+            ) : null}
+            질문
+          </Link>
           <div className="relative" ref={dropdownRef}>
             <button
               type="button"
@@ -134,7 +151,7 @@ export default function MentorTopBar() {
               )}
             </button>
             {isOpen && (
-              <div className="absolute right-0 mt-3 w-[320px] max-h-[60vh] overflow-y-auto rounded-3xl border border-neutral-100 bg-white p-4 shadow-2xl">
+              <div className="absolute right-0 mt-3 w-[320px] max-h-[60vh] overflow-y-auto rounded-3xl border border-neutral-100 bg-white p-4 shadow-2xl sm:w-[490px]">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-sm font-semibold text-neutral-900">알림</p>
                   <button

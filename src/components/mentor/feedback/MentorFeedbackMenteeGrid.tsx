@@ -44,7 +44,7 @@ export default function MentorFeedbackMenteeGrid({ menteeCards, onSelectMentee }
             <ChevronRight className="h-5 w-5 text-neutral-400" />
           </div>
 
-          <div className="mt-4 space-y-2 rounded-2xl bg-white px-4 py-3 text-xs">
+          <div className="mt-4 space-y-2 rounded-2xl bg-[#F6F8FA] px-4 py-3 text-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-neutral-900">학습</span>

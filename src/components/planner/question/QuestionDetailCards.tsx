@@ -21,6 +21,16 @@ export default function QuestionDetailCards({ question }: Props) {
         </div>
         <h2 className="text-lg font-semibold text-neutral-900">{question.title}</h2>
         <p className="text-sm leading-6 text-neutral-700">{question.content}</p>
+        {question.attachmentUrl && (
+          <a
+            href={question.attachmentUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline"
+          >
+            첨부 자료 보기
+          </a>
+        )}
       </section>
 
       <section className="space-y-3 rounded-3xl bg-neutral-100 p-5 ">

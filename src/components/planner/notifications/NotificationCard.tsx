@@ -39,7 +39,7 @@ const formatCreatedAt = (value?: string) => {
   if (!value) return '';
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return '';
-  return format(parsed, 'M월 d일 HH:mm');
+  return format(parsed, 'M월 d일 a h:mm');
 };
 
 const resolveNotificationLink = (item: Notification) => {
@@ -92,25 +92,11 @@ export default function NotificationCard({
           <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[10px] font-semibold text-neutral-700">
             {typeLabel}
           </span>
-          {item.type && <span>{item.type}</span>}
           {createdAt && <span>· {createdAt}</span>}
         </div>
       </div>
       <div className="flex flex-col items-end gap-2">
         {!isRead && <span className="mt-1 h-2 w-2 rounded-full bg-rose-500" />}
-        {!isRead && (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onMarkRead(item.id);
-            }}
-            className="text-[10px] font-semibold text-neutral-500 hover:text-neutral-700"
-          >
-            읽음 처리
-          </button>
-        )}
       </div>
     </div>
   );

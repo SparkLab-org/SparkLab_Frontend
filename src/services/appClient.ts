@@ -9,11 +9,16 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api';
 
 let authMeInFlight: Promise<void> | null = null;
+let lastHydratedToken: string | null = null;
+let lastHydratedAt = 0;
+const AUTH_ME_TTL_MS = 5 * 60 * 1000;
 
 async function hydrateAccountIdentity(token: string) {
   if (typeof window === 'undefined') return;
-  const stored = window.localStorage.getItem('accountId');
-  if (stored && stored.trim().length > 0) return;
+  const now = Date.now();
+  if (token === lastHydratedToken && now - lastHydratedAt < AUTH_ME_TTL_MS) {
+    return;
+  }
   if (authMeInFlight) return authMeInFlight;
 
   authMeInFlight = (async () => {
@@ -47,6 +52,8 @@ async function hydrateAccountIdentity(token: string) {
       if (Array.isArray(me.roles) && me.roles[0]) {
         window.localStorage.setItem('role', String(me.roles[0]).toUpperCase());
       }
+      lastHydratedToken = token;
+      lastHydratedAt = Date.now();
     } catch {
       // ignore hydration errors
     } finally {

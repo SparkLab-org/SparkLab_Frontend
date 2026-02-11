@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { addMonths, format, isSameMonth, startOfMonth, subMonths } from 'date-fns';
+import { addMonths, endOfMonth, format, isSameMonth, startOfMonth, subMonths } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
 import { useMentorStore } from '@/src/store/mentorStore';
@@ -51,7 +51,30 @@ export default function MentorPlannerView() {
     () => monthCells.map((date) => format(date, 'yyyy-MM-dd')),
     [monthCells]
   );
-  const { data: todos = [] } = useTodosRangeQuery(monthDates);
+  const menteeNumericIdForRange = useMemo(() => {
+    const fallbackId = mentees[0]?.id ?? '';
+    const candidate = selectedMenteeId || fallbackId;
+    const numeric = resolveNumericId(candidate);
+    if (numeric) return numeric;
+    const matched = mentees.find(
+      (mentee) => mentee.id === candidate || mentee.name === candidate
+    );
+    return resolveNumericId(matched?.id ?? null);
+  }, [selectedMenteeId, mentees]);
+  const monthRange = useMemo(() => {
+    const monthStart = startOfMonth(activeMonth);
+    const monthEnd = endOfMonth(activeMonth);
+    return {
+      start: format(monthStart, 'yyyy-MM-dd'),
+      end: format(monthEnd, 'yyyy-MM-dd'),
+    };
+  }, [activeMonth]);
+  const { data: todos = [] } = useTodosRangeQuery(monthDates, {
+    rangeStart: monthRange.start,
+    rangeEnd: monthRange.end,
+    menteeId: menteeNumericIdForRange ?? undefined,
+    scope: 'mentor-planner',
+  });
   const { mutate: createTodo, isPending: isCreating } = useCreateTodoMutation();
 
   const menteeList = useMemo(() => mentees, [mentees]);
@@ -125,12 +148,14 @@ export default function MentorPlannerView() {
       if (!activeMenteeId) return true;
       const id = String(todo.assigneeId ?? '');
       const name = String(todo.assigneeName ?? '');
+      const numericKey = activeMenteeNumericId ? String(activeMenteeNumericId) : '';
       const hasAssignee = Boolean(id || name);
       if (!hasAssignee) return true;
       const byId = id === String(activeMenteeId);
       const byName =
         selectedMenteeName.length > 0 ? name === selectedMenteeName : false;
-      return byId || byName;
+      const byNumeric = numericKey.length > 0 && (id === numericKey || name === numericKey);
+      return byId || byName || byNumeric;
     });
     if (filtered.length > 0) {
       return [...filtered].sort((a, b) => a.dueTime.localeCompare(b.dueTime));
@@ -162,6 +187,7 @@ export default function MentorPlannerView() {
     todos,
     selectedDateKey,
     activeMenteeId,
+    activeMenteeNumericId,
     selectedMentee,
     selectedMenteeName,
     todoStatusTodos,
@@ -170,6 +196,7 @@ export default function MentorPlannerView() {
   const scheduleByDate = useMemo(() => {
     const menteeIdKey = activeMenteeId ? String(activeMenteeId) : '';
     const menteeNameKey = selectedMenteeName ? String(selectedMenteeName) : '';
+    const menteeNumericKey = activeMenteeNumericId ? String(activeMenteeNumericId) : '';
     const shouldFilterByMentee = Boolean(menteeIdKey || menteeNameKey);
     const filteredTodos = shouldFilterByMentee
       ? todos.filter((todo) => {
@@ -180,6 +207,8 @@ export default function MentorPlannerView() {
           if (menteeNameKey && name === menteeNameKey) return true;
           if (menteeNameKey && id === menteeNameKey) return true;
           if (menteeIdKey && name === menteeIdKey) return true;
+          if (menteeNumericKey && id === menteeNumericKey) return true;
+          if (menteeNumericKey && name === menteeNumericKey) return true;
           return false;
         })
       : todos;
@@ -198,6 +227,7 @@ export default function MentorPlannerView() {
     activeMonth,
     menteeList,
     activeMenteeId,
+    activeMenteeNumericId,
     selectedMenteeName,
     todos,
     todoStatusTodos,
@@ -239,6 +269,7 @@ export default function MentorPlannerView() {
     dueTime: string;
     goal?: string;
     guideFileName?: string;
+    guideFile?: File | null;
   }) => {
     if (!activeMenteeId) return;
     setPanelError('');
@@ -252,6 +283,7 @@ export default function MentorPlannerView() {
         isFixed: true,
         goal: input.goal,
         guideFileName: input.guideFileName,
+        guideFile: input.guideFile ?? undefined,
         assigneeId: activeMenteeId,
         assigneeName: selectedMentee?.name,
       },

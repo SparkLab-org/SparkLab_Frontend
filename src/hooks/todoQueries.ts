@@ -12,6 +12,7 @@ import {
   getTodoSnapshot,
   getTodo,
   listTodos,
+  listTodosByRange,
   updateTodo,
   updateFixedTodo,
 } from '@/src/services/todo.api';
@@ -19,16 +20,36 @@ import {
 export const todoQueryKeys = {
   all: ['todos'] as const,
   detail: (id?: string | null) => [...todoQueryKeys.all, 'detail', id ?? null] as const,
-  list: (accountId?: string | null, plannerId?: number | null, planDate?: string | null) =>
+  list: (
+    accountId?: string | null,
+    plannerId?: number | null,
+    planDate?: string | null,
+    menteeId?: number | null
+  ) =>
     [
       ...todoQueryKeys.all,
       'list',
       accountId ?? null,
       plannerId ?? null,
       planDate ?? null,
+      menteeId ?? null,
     ] as const,
-  range: (accountId: string | null, dates: string[]) =>
-    [...todoQueryKeys.all, 'range', accountId ?? null, ...dates] as const,
+  range: (
+    accountId: string | null,
+    dates: string[],
+    rangeKey?: string | null,
+    menteeId?: number | null,
+    scope?: string | null
+  ) =>
+    [
+      ...todoQueryKeys.all,
+      'range',
+      accountId ?? null,
+      rangeKey ?? null,
+      menteeId ?? null,
+      scope ?? null,
+      ...dates,
+    ] as const,
 };
 
 type TodoItem = ReturnType<typeof getTodoSnapshot>[number];
@@ -64,6 +85,7 @@ function isValidDateString(value: string) {
 
 export function useTodosQuery(params: ListTodosParams = {}) {
   const plannerId = params.plannerId ?? null;
+  const menteeId = params.menteeId ?? null;
   let planDate = params.planDate ?? null;
   if (!planDate && plannerId == null) {
     const now = new Date();
@@ -77,12 +99,13 @@ export function useTodosQuery(params: ListTodosParams = {}) {
     ...params,
     plannerId: plannerId ?? undefined,
     planDate: planDate ?? undefined,
+    menteeId: menteeId ?? undefined,
   };
   const accountId =
     typeof window !== 'undefined' ? window.localStorage.getItem('accountId') : null;
 
   return useQuery({
-    queryKey: todoQueryKeys.list(accountId, plannerId, planDate),
+    queryKey: todoQueryKeys.list(accountId, plannerId, planDate, menteeId),
     queryFn: () => listTodos(resolvedParams),
     initialData: () => getTodoSnapshot(),
   });
@@ -101,16 +124,44 @@ export function useTodoDetailQuery(todoId?: string | number) {
   });
 }
 
-export function useTodosRangeQuery(dates: string[]) {
+export function useTodosRangeQuery(
+  dates: string[],
+  options?: { rangeStart?: string; rangeEnd?: string; menteeId?: number; scope?: string }
+) {
   const normalized = Array.from(
     new Set(dates.filter((date) => isValidDateString(date)))
   ).sort();
   const accountId =
     typeof window !== 'undefined' ? window.localStorage.getItem('accountId') : null;
+  const rangeStart = options?.rangeStart;
+  const rangeEnd = options?.rangeEnd;
+  const menteeId = options?.menteeId;
+  const scope = options?.scope ?? null;
+  const rangeKey = rangeStart && rangeEnd ? `${rangeStart}:${rangeEnd}` : null;
+  const shouldUseRange = Boolean(rangeStart && rangeEnd);
 
   return useQuery({
-    queryKey: todoQueryKeys.range(accountId, normalized),
+    queryKey: todoQueryKeys.range(
+      accountId,
+      normalized,
+      rangeKey,
+      menteeId ?? null,
+      scope
+    ),
     queryFn: async () => {
+      if (normalized.length === 0 && !shouldUseRange) return [];
+
+      if (shouldUseRange && rangeStart && rangeEnd) {
+        const rangeResult = await listTodosByRange({
+          startDate: rangeStart,
+          endDate: rangeEnd,
+          ...(typeof menteeId === 'number' ? { menteeId } : {}),
+        });
+        if (rangeResult.hasTodosField) {
+          return rangeResult.todos;
+        }
+      }
+
       if (normalized.length === 0) return [];
       const merged = new Map<string, TodoItem>();
       const targets: string[] = [];
@@ -160,7 +211,13 @@ export function useTodosRangeQuery(dates: string[]) {
       return Array.from(merged.values());
     },
     initialData: () => getTodoSnapshot(),
-    enabled: normalized.length > 0,
+    staleTime: 60 * 1000,
+    refetchOnMount: (query) => {
+      const data = query.state.data;
+      if (!Array.isArray(data) || data.length === 0) return 'always';
+      return false;
+    },
+    enabled: normalized.length > 0 || shouldUseRange,
   });
 }
 

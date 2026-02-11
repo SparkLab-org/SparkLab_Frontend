@@ -41,7 +41,9 @@ export default function MentorFeedbackChannelList({
                 aria-hidden
               />
               {mentee.feedbackRequests > 0 && (
-                <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-rose-400" />
+                <span className="absolute right-0 top-0 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
+                  {mentee.feedbackRequests}
+                </span>
               )}
             </div>
             <span

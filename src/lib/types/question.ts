@@ -8,6 +8,7 @@ export type Question = {
   status: QuestionStatus;
   content: string;
   answer?: string | null;
+  attachmentUrl?: string | null;
   menteeId?: number | string;
   createdAt: number;
   updatedAt?: number;

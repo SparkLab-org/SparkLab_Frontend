@@ -21,16 +21,13 @@ export default function LoginCard({ role, onRoleChange }: Props) {
   const [error, setError] = useState('');
 
 
-  const title = useMemo(
-    () => (role === 'mentee' ? '멘티 로그인' : '멘토 로그인'),
-    [role]
-  );
+  const title = useMemo(() => '', []);
 
   const subtitle = useMemo(
     () =>
       role === 'mentee'
-        ? '플래너 · 과제 · 마이페이지'
-        : '멘티 목록 · 피드백 작성',
+        ? ''
+        : '',
     [role]
   );
 
@@ -165,7 +162,7 @@ export default function LoginCard({ role, onRoleChange }: Props) {
 
 
   return (
-    <div className="space-y-4 rounded-3xl border border-neutral-200 bg-neutral-50 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+    <div className="space-y-4 rounded-3xl bg-white p-6 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
       <div className="flex justify-center">
         <div className="inline-flex rounded-full bg-neutral-200 p-1 text-sm font-semibold">
           {(
@@ -182,7 +179,9 @@ export default function LoginCard({ role, onRoleChange }: Props) {
                 onClick={() => onRoleChange(item.value)}
                 className={[
                   'rounded-full px-4 py-2 transition',
-                  active ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-800',
+                  active
+                    ? 'bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] text-white shadow-sm'
+                    : 'text-neutral-500 hover:text-neutral-800',
                 ].join(' ')}
               >
                 {item.label}
@@ -192,38 +191,43 @@ export default function LoginCard({ role, onRoleChange }: Props) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-        <p className="text-sm font-semibold text-neutral-900">{title}</p>
-        <p className="mt-1 text-xs text-neutral-500">{subtitle}</p>
+      <div className="rounded-2xl px-3 py-1">
+        {title ? (
+          <p className="text-sm font-semibold text-neutral-900">{title}</p>
+        ) : null}
+        {subtitle ? (
+          <p className="mt-1 text-xs text-neutral-500">{subtitle}</p>
+        ) : null}
         <form onSubmit={onSubmit} className="mt-4 space-y-3">
           <input
             value={accountId}
             onChange={(e)=>setAccountId(e.target.value)}
             placeholder="아이디"
-            className="w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+            className="w-full rounded-lg bg-[#F6F8FA] px-3 py-3 text-sm font-semibold text-[#2B2B2B] outline-none focus:border-[#3D9DF3]"
           />
           <input
             value={accountPw}
             onChange={(e)=>setAccountPw(e.target.value)}
             type="password"
             placeholder="비밀번호"
-            className="w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+            className="w-full rounded-lg bg-[#F6F8FA] px-3 py-3 text-sm font-semibold text-[#2B2B2B] outline-none focus:border-[#3D9DF3]"
           />
 
           {error && <p className="text-sm text-red-500">{error}</p>}
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] px-3 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
+            className="w-full rounded-xl bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] px-3 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
           >
             {cta}
           </button>
         </form>
       </div>
 
-      <div className="rounded-2xl border border-dashed border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-600">
-        계정이 없다면 설스터디에서 학습코칭 상담을 받아보세요.
-      </div>
+      <p className="text-sm text-neutral-400">
+        계정이 없다면 설스터디에서
+        <span className="block sm:inline"> 학습코칭 상담을 받아보세요.</span>
+      </p>
     </div>
   );
 }

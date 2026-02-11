@@ -115,7 +115,7 @@ export default function TimerFloatingWidget() {
               event.stopPropagation();
               closePanel();
             }}
-            className="max-w-[120px] truncate text-white hover:underline"
+            className="max-w-30 truncate text-white hover:underline"
           >
             {activeTodo.title}
           </Link>

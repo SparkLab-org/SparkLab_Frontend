@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
-import { addDays, format, startOfWeek } from "date-fns";
+import { addDays, endOfMonth, format, startOfMonth, startOfWeek } from "date-fns";
 
 import PlannerDateGrid from "../calendar/PlannerDateGrid";
 import { usePlannerStore } from "@/src/store/plannerStore";
@@ -33,7 +33,19 @@ export default function WeeklyCalendar({}: Props) {
     () => weekDays.map((day) => format(day, "yyyy-MM-dd")),
     [weekDays]
   );
-  const { data: todos = [] } = useTodosRangeQuery(weekDateKeys);
+  const monthRange = useMemo(() => {
+    const monthStart = startOfMonth(selectedDate);
+    const monthEnd = endOfMonth(selectedDate);
+    return {
+      start: format(monthStart, "yyyy-MM-dd"),
+      end: format(monthEnd, "yyyy-MM-dd"),
+    };
+  }, [selectedDate]);
+  const { data: todos = [] } = useTodosRangeQuery(weekDateKeys, {
+    rangeStart: monthRange.start,
+    rangeEnd: monthRange.end,
+    scope: 'planner-home',
+  });
 
   const progressByDate: Record<string, number> = useMemo(() => {
     const counts = todos.reduce<Record<string, { total: number; done: number }>>((acc, todo) => {

@@ -9,15 +9,17 @@ import type { ActiveLevel, Mentee } from '@/src/components/mentor/types';
 import { getProgressFillStyle } from '@/src/lib/utils/progressStyle';
 import { useUpdateMenteeActiveLevelMutation } from '@/src/hooks/menteeQueries';
 import { useTodosRangeQuery } from '@/src/hooks/todoQueries';
+import { useFeedbacksQuery } from '@/src/hooks/feedbackQueries';
 import { addDays, format, subDays } from 'date-fns';
 import {
   listTodoFeedbackStatus,
   type TodoFeedbackStatusResponse,
 } from '@/src/services/feedback.api';
+import type { Feedback } from '@/src/lib/types/feedback';
+import { hasFeedbackForTodo } from '@/src/components/mentor/feedback/mentorFeedbackUtils';
 
 type Props = {
   onSelect?: (id: string) => void;
-  onOpenQuestions?: (id: string) => void;
 };
 
 function getLevelLabel(level?: ActiveLevel) {
@@ -61,7 +63,7 @@ function isAssignmentType(value?: string) {
   );
 }
 
-export default function MenteeListView({ onSelect, onOpenQuestions }: Props) {
+export default function MenteeListView({ onSelect }: Props) {
   const mentees = useMentorStore((s) => s.mentees);
   const setSelectedId = useMentorStore((s) => s.setSelectedId);
   const selectedId = useMentorStore((s) => s.selectedId);
@@ -75,6 +77,7 @@ export default function MenteeListView({ onSelect, onOpenQuestions }: Props) {
     );
   }, []);
   const { data: todos = [] } = useTodosRangeQuery(rangeDates);
+  const { data: feedbacks = [] } = useFeedbacksQuery();
   const todayKey = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const menteeStatusQueries = useQueries({
     queries: mentees.map((mentee) => {
@@ -102,6 +105,16 @@ export default function MenteeListView({ onSelect, onOpenQuestions }: Props) {
     });
     return map;
   }, [menteeStatusQueries, mentees]);
+
+  const feedbackByTodoId = useMemo(() => {
+    const map = new Map<string, Feedback>();
+    feedbacks.forEach((feedback) => {
+      if (feedback.todoItemId !== undefined) {
+        map.set(String(feedback.todoItemId), feedback);
+      }
+    });
+    return map;
+  }, [feedbacks]);
 
   const todosByMentee = useMemo(() => {
     const map = new Map<string, typeof todos>();
@@ -159,12 +172,11 @@ export default function MenteeListView({ onSelect, onOpenQuestions }: Props) {
       <div className="w-full max-w-[900px] rounded-3xl bg-white p-4 overflow-x-auto">
         <div className="min-w-[800px]">
           <div className="grid grid-cols-12 items-center gap-2 rounded-xl bg-[#F6F8FA] px-4 py-3 text-center text-xs font-semibold text-neutral-500 whitespace-nowrap">
-            <span className="col-span-3">이름</span>
-            <span className="col-span-3">진행률</span>
+            <span className="col-span-2">이름</span>
+            <span className="col-span-2">학습 진행</span>
+            <span className="col-span-4">성취도</span>
             <span className="col-span-2">미제출과제</span>
-            <span className="col-span-2">피드백</span>
-            <span className="col-span-1">학습 진행</span>
-            <span className="col-span-1">질문</span>
+            <span className="col-span-2">피드백 필요</span>
           </div>
 
           <div className="mt-3 divide-y divide-[#D9D9D9] rounded-2xl overflow-hidden">
@@ -184,7 +196,7 @@ export default function MenteeListView({ onSelect, onOpenQuestions }: Props) {
                 ? todoList.filter(
                     (todo) =>
                       todo.status === 'DONE' &&
-                      (!todo.feedback || todo.feedback.trim().length === 0)
+                      !hasFeedbackForTodo(todo, feedbackByTodoId)
                   ).length
                 : statusList.filter((item) => !item.hasFeedback).length;
               return (
@@ -210,7 +222,7 @@ export default function MenteeListView({ onSelect, onOpenQuestions }: Props) {
                       : 'bg-white hover:bg-[#F6F8FA]/70',
                   ].join(' ')}
                 >
-                  <div className="col-span-3 flex items-center gap-3 justify-start text-left">
+                  <div className="col-span-2 flex items-center gap-3 justify-start text-left">
                     <span className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-300/70">
                       <User
                         className="h-5 w-5 text-neutral-500"
@@ -221,21 +233,7 @@ export default function MenteeListView({ onSelect, onOpenQuestions }: Props) {
                     </span>
                     <span className="font-semibold text-neutral-900">{mentee.name}</span>
                   </div>
-                  <div className="col-span-3 flex items-center gap-3">
-                    <div className="h-2 w-full max-w-[180px] rounded-full bg-[#D5EBFF]">
-                      <div
-                        className="h-full rounded-full"
-                        style={getProgressFillStyle(progressRate)}
-                      />
-                    </div>
-                  </div>
-                  <span className="col-span-2 text-sm font-semibold text-neutral-600">
-                    {unsubmittedAssignments}건
-                  </span>
-                  <span className="col-span-2 text-sm font-semibold text-neutral-600">
-                    {pendingFeedback}건
-                  </span>
-                  <div className="col-span-1 flex items-center">
+                  <div className="col-span-2 flex items-center justify-center">
                     <span
                       className={[
                         'inline-flex items-center justify-center rounded-full px-3 py-1.5 text-center text-xs font-semibold leading-none',
@@ -245,18 +243,28 @@ export default function MenteeListView({ onSelect, onOpenQuestions }: Props) {
                       {getLevelLabel(mentee.activeLevel)}
                     </span>
                   </div>
-                  <div className="col-span-1 flex items-center justify-center">
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onOpenQuestions?.(mentee.id);
-                      }}
-                      className="rounded-full bg-[#004DFF] px-3 py-1 text-[11px] font-semibold text-white"
-                    >
-                      질문
-                    </button>
+                  <div className="col-span-4 flex items-center justify-center gap-3">
+                    <div className="h-2 w-full max-w-[180px] rounded-full bg-[#D5EBFF]">
+                      <div
+                        className="h-full rounded-full"
+                        style={getProgressFillStyle(progressRate)}
+                      />
+                    </div>
                   </div>
+                  <span className="col-span-2 text-sm font-semibold text-neutral-600">
+                    {unsubmittedAssignments}
+                  </span>
+                  <span className="col-span-2">
+                    {pendingFeedback > 0 ? (
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-600">
+                        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
+                          {pendingFeedback}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-sm font-semibold text-neutral-600">0</span>
+                    )}
+                  </span>
                 </div>
               );
             })}

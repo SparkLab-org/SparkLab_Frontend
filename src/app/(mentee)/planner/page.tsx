@@ -1,6 +1,7 @@
 import Link from "next/link";
 import bellIcon from "@/src/assets/icons/bell.svg";
 import GreetingCard from "@/src/components/planner/landing/greetingCard";
+import PlannerMonthlyPrefetch from "@/src/components/planner/landing/PlannerMonthlyPrefetch";
 import WeeklyCalendar from "@/src/components/planner/landing/WeeklyCalendar";
 import TodayTodoSummary from "@/src/components/planner/landing/TodayTodoSummary";
 import YesterdayFeedbackSummary from "@/src/components/planner/landing/YesterdayFeedbackSummary";
@@ -9,6 +10,7 @@ import DailyPlanCommentCard from "@/src/components/planner/landing/DailyPlanComm
 export default function PlannerPage() {
   return (
     <div className="mx-auto max-w-md space-y-3.5 px-3 pb-16">
+      <PlannerMonthlyPrefetch />
       <div className="flex justify-end">
         <Link
           href="/planner/notifications"

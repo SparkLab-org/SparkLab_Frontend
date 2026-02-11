@@ -57,7 +57,7 @@ export default function TodoItem({
     return (
       <div
         className={[
-          'rounded-[20px] px-4 py-5 shadow-sm ring-1',
+          'rounded-4xl px-4 py-5 shadow-sm ring-1',
           isDone ? 'bg-emerald-50 ring-emerald-200' : 'bg-[#F5F5F5] ring-neutral-100',
         ].join(' ')}
       >
