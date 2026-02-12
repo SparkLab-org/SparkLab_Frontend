@@ -6,7 +6,20 @@
  * - 401 응답 시 토큰 삭제 및 로그인 처리
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api';
+const RAW_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api';
+
+const resolveApiBaseUrl = () => {
+  if (typeof window === 'undefined') {
+    return RAW_API_BASE_URL;
+  }
+  if (RAW_API_BASE_URL.startsWith('http')) {
+    const host = window.location.hostname;
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return '/api';
+    }
+  }
+  return RAW_API_BASE_URL;
+};
 
 let authMeInFlight: Promise<void> | null = null;
 let lastHydratedToken: string | null = null;
@@ -23,7 +36,8 @@ async function hydrateAccountIdentity(token: string) {
 
   authMeInFlight = (async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/me`, {
+      const apiBaseUrl = resolveApiBaseUrl();
+      const res = await fetch(`${apiBaseUrl}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return;
@@ -82,7 +96,8 @@ export async function apiFetch<T>(
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const isAuthPath = path.startsWith('/auth/');
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const apiBaseUrl = resolveApiBaseUrl();
+  const res = await fetch(`${apiBaseUrl}${path}`, {
     ...options,
     headers: {
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
@@ -92,7 +107,7 @@ export async function apiFetch<T>(
     },
   });
 
-  console.log('API_BASE_URL', API_BASE_URL, 'path', path);
+  console.log('API_BASE_URL', apiBaseUrl, 'path', path);
 
   // 🔥 401 공통 처리
   if (res.status === 401) {
