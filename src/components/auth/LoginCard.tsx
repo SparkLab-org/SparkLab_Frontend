@@ -59,6 +59,9 @@ export default function LoginCard({ role, onRoleChange }: Props) {
       console.log('signin res:', res);
       // ✅ 토큰 저장
       localStorage.setItem('accessToken', res.accessToken);
+      if (accountId.trim().length > 0) {
+        localStorage.setItem('accountId', accountId.trim());
+      }
       const fallbackRole = role === 'mentor' ? 'MENTOR' : 'MENTEE';
       let nextPath = fallbackRole === 'MENTOR' ? '/mentor' : '/planner';
       try {

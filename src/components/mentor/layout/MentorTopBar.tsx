@@ -7,6 +7,7 @@ import seolStudyIcon from '@/src/assets/icons/seolStudy.svg';
 import bellIcon from '@/src/assets/icons/bell.svg';
 import sendIcon from '@/src/assets/icons/send.svg';
 import { useNotificationsQuery } from '@/src/hooks/notificationQueries';
+import { useAuthMeQuery } from '@/src/hooks/authQueries';
 import NotificationEmpty from '@/src/components/planner/notifications/NotificationEmpty';
 import NotificationList from '@/src/components/planner/notifications/NotificationList';
 import NotificationLoginHint from '@/src/components/planner/notifications/NotificationLoginHint';
@@ -53,6 +54,8 @@ export default function MentorTopBar() {
     getAccountIdSnapshot,
     () => ACCOUNT_ID_FALLBACK
   );
+  const { data: authMe } = useAuthMeQuery();
+  const displayAccountId = authMe?.accountId ?? accountId;
   const hasToken = useMemo(() => {
     if (typeof window === 'undefined') return false;
     const token = window.localStorage.getItem('accessToken');
@@ -91,6 +94,13 @@ export default function MentorTopBar() {
       document.removeEventListener('keydown', onKeyDown);
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!authMe?.accountId) return;
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('accountId', authMe.accountId);
+    }
+  }, [authMe?.accountId]);
 
   const persistRead = (next: Set<string>) => {
     setReadIds(next);
@@ -187,7 +197,7 @@ export default function MentorTopBar() {
             </span>
             <div className="min-w-0 text-xs text-neutral-500">
               <div className="flex items-center gap-2">
-                <p className="font-semibold text-neutral-900">{accountId}</p>
+                <p className="font-semibold text-neutral-900">{displayAccountId}</p>
                 <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
                   멘토
                 </span>

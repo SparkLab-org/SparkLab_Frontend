@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 
 import { useTodosQuery } from '@/src/hooks/todoQueries';
 import { useMenteeMyPageQuery } from '@/src/hooks/mypageQueries';
+import { useAuthMeQuery } from '@/src/hooks/authQueries';
 import { useAuthStore } from '@/src/store/authStore';
 import MyAccountActions from './MyAccountActions';
 import MyAchievementCard from './MyAchievementCard';
@@ -16,6 +17,7 @@ export default function MyPageView() {
   const logout = useAuthStore((s) => s.logout);
   const { data: todos = [] } = useTodosQuery();
   const { data: myPage } = useMenteeMyPageQuery();
+  const { data: authMe } = useAuthMeQuery();
   const [accountId, setAccountId] = useState('OOO');
   const [activeLevel, setActiveLevel] = useState<'NORMAL' | 'WARNING' | 'DANGER'>('NORMAL');
   const [isLevelInfoOpen, setIsLevelInfoOpen] = useState(false);
@@ -65,7 +67,15 @@ export default function MyPageView() {
     }
   }, []);
 
-  const displayAccountId = myPage?.accountId ?? accountId;
+  useEffect(() => {
+    if (!authMe?.accountId) return;
+    setAccountId(authMe.accountId);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('accountId', authMe.accountId);
+    }
+  }, [authMe?.accountId]);
+
+  const displayAccountId = authMe?.accountId ?? myPage?.accountId ?? accountId;
   const displayActiveLevel = myPage?.activeLevel ?? activeLevel;
 
   return (
