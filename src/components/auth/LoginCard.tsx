@@ -59,9 +59,12 @@ export default function LoginCard({ role, onRoleChange }: Props) {
       console.log('signin res:', res);
       // ✅ 토큰 저장
       localStorage.setItem('accessToken', res.accessToken);
-      let nextPath = '/planner';
+      const fallbackRole = role === 'mentor' ? 'MENTOR' : 'MENTEE';
+      let nextPath = fallbackRole === 'MENTOR' ? '/mentor' : '/planner';
       try {
         const me = await getMe();
+        let resolvedMenteeId: number | null = null;
+        let resolvedMentorId: number | null = null;
         if (typeof me.accountId === 'string') {
           localStorage.setItem('accountId', me.accountId);
         }
@@ -71,52 +74,7 @@ export default function LoginCard({ role, onRoleChange }: Props) {
               ? me.menteeId
               : Number(me.menteeId);
           if (Number.isFinite(parsed)) {
-            localStorage.setItem('menteeId', String(parsed));
-            const now = new Date();
-            const yyyy = now.getFullYear();
-            const mm = String(now.getMonth() + 1).padStart(2, '0');
-            const dd = String(now.getDate()).padStart(2, '0');
-            const planDate = `${yyyy}-${mm}-${dd}`;
-            try {
-              const res = await findOrCreateDailyPlan({ planDate });
-              if (res.dailyPlanId && res.dailyPlanId > 0) {
-                localStorage.setItem('plannerId', String(res.dailyPlanId));
-                if (typeof me.accountId === 'string') {
-                  localStorage.setItem(
-                    `plannerId:${me.accountId}`,
-                    String(res.dailyPlanId)
-                  );
-                }
-              }
-            } catch {
-              // ignore dailyPlan failures
-            }
-          }
-        } else {
-          const rawAccountId = typeof me.accountId === 'string' ? me.accountId : '';
-          const numericMatch = rawAccountId.match(/\d+/);
-          const fallbackAccountId = numericMatch ? Number(numericMatch[0]) : undefined;
-          if (fallbackAccountId && Number.isFinite(fallbackAccountId)) {
-            localStorage.setItem('menteeId', String(fallbackAccountId));
-            const now = new Date();
-            const yyyy = now.getFullYear();
-            const mm = String(now.getMonth() + 1).padStart(2, '0');
-            const dd = String(now.getDate()).padStart(2, '0');
-            const planDate = `${yyyy}-${mm}-${dd}`;
-            try {
-              const res = await findOrCreateDailyPlan({ planDate });
-              if (res.dailyPlanId && res.dailyPlanId > 0) {
-                localStorage.setItem('plannerId', String(res.dailyPlanId));
-                if (typeof me.accountId === 'string') {
-                  localStorage.setItem(
-                    `plannerId:${me.accountId}`,
-                    String(res.dailyPlanId)
-                  );
-                }
-              }
-            } catch {
-              // ignore dailyPlan failures
-            }
+            resolvedMenteeId = parsed;
           }
         }
         if (me.mentorId !== undefined && me.mentorId !== null) {
@@ -125,8 +83,11 @@ export default function LoginCard({ role, onRoleChange }: Props) {
               ? me.mentorId
               : Number(me.mentorId);
           if (Number.isFinite(parsed)) {
-            localStorage.setItem('mentorId', String(parsed));
+            resolvedMentorId = parsed;
           }
+        }
+        if (resolvedMentorId !== null) {
+          localStorage.setItem('mentorId', String(resolvedMentorId));
         }
         if (me.plannerId !== undefined && me.plannerId !== null) {
           const parsed =
@@ -140,16 +101,57 @@ export default function LoginCard({ role, onRoleChange }: Props) {
           // 임시 값: 백엔드에 실제 plannerId가 없을 때 0으로 저장
           localStorage.setItem('plannerId', '0');
         }
-        if (Array.isArray(me.roles)) {
+
+        let resolvedRole = fallbackRole;
+        if (resolvedMentorId !== null) {
+          resolvedRole = 'MENTOR';
+        } else if (resolvedMenteeId !== null) {
+          resolvedRole = 'MENTEE';
+        } else if (Array.isArray(me.roles)) {
           const roles = me.roles.map((role) => String(role).toUpperCase());
-          if (roles[0]) {
-            localStorage.setItem('role', roles[0]);
+          if (roles.some((item) => item.includes('MENTOR'))) {
+            resolvedRole = 'MENTOR';
+          } else if (roles.some((item) => item.includes('MENTEE'))) {
+            resolvedRole = 'MENTEE';
           }
-          if (roles.includes('MENTOR')) nextPath = '/mentor';
-          else if (roles.includes('MENTEE')) nextPath = '/planner';
         }
+
+        if (resolvedRole === 'MENTEE' && resolvedMenteeId === null) {
+          const rawAccountId = typeof me.accountId === 'string' ? me.accountId : '';
+          const numericMatch = rawAccountId.match(/\d+/);
+          const fallbackAccountId = numericMatch ? Number(numericMatch[0]) : undefined;
+          if (fallbackAccountId && Number.isFinite(fallbackAccountId)) {
+            resolvedMenteeId = fallbackAccountId;
+          }
+        }
+
+        if (resolvedRole === 'MENTEE' && resolvedMenteeId !== null) {
+          localStorage.setItem('menteeId', String(resolvedMenteeId));
+          const now = new Date();
+          const yyyy = now.getFullYear();
+          const mm = String(now.getMonth() + 1).padStart(2, '0');
+          const dd = String(now.getDate()).padStart(2, '0');
+          const planDate = `${yyyy}-${mm}-${dd}`;
+          try {
+            const res = await findOrCreateDailyPlan({ planDate });
+            if (res.dailyPlanId && res.dailyPlanId > 0) {
+              localStorage.setItem('plannerId', String(res.dailyPlanId));
+              if (typeof me.accountId === 'string') {
+                localStorage.setItem(
+                  `plannerId:${me.accountId}`,
+                  String(res.dailyPlanId)
+                );
+              }
+            }
+          } catch {
+            // ignore dailyPlan failures
+          }
+        }
+
+        localStorage.setItem('role', resolvedRole);
+        nextPath = resolvedRole === 'MENTOR' ? '/mentor' : '/planner';
       } catch {
-        // ignore me fetch failures
+        localStorage.setItem('role', fallbackRole);
       }
       setAuthenticated(true);
 

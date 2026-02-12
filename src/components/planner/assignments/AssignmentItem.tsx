@@ -11,10 +11,18 @@ type Props = {
 export default function AssignmentItem({ todo }: Props) {
   const statusLabel = getTodoStatusLabel(todo);
   const isLate = isOverdueTask(todo) && todo.status !== 'DONE';
+  const handleClick = () => {
+    if (typeof window === 'undefined') return;
+    if (todo.assignmentId) {
+      window.localStorage.setItem(`assignmentIdOverride:${todo.id}`, String(todo.assignmentId));
+      window.localStorage.setItem('assignmentIdOverride', String(todo.assignmentId));
+    }
+  };
 
   return (
     <Link
       href={`/planner/assignments/${todo.id}`}
+      onClick={handleClick}
       className="rounded-3xl bg-[#F5F5F5] px-4 py-4 transition hover:translate-y-[-1px]"
     >
       <div className="flex items-center justify-between">

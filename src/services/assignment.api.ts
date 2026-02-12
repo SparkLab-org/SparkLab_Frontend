@@ -101,6 +101,9 @@ export async function submitAssignment(
   fileList.forEach((file) => {
     formData.append('files', file);
   });
+  if (fileList.length === 1) {
+    formData.append('file', fileList[0]);
+  }
 
   const url = buildQuery(`/assignments/${assignmentId}/submissions`, { comment });
   const response = await apiFetch<AssignmentSubmissionBatchResponse | AssignmentSubmissionResponse>(

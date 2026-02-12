@@ -63,8 +63,21 @@ async function hydrateAccountIdentity(token: string) {
           window.localStorage.setItem(`plannerId:${me.accountId}`, String(me.plannerId));
         }
       }
-      if (Array.isArray(me.roles) && me.roles[0]) {
-        window.localStorage.setItem('role', String(me.roles[0]).toUpperCase());
+      const hasMentorId = typeof me.mentorId === 'number';
+      const hasMenteeId = typeof me.menteeId === 'number';
+      if (hasMentorId) {
+        window.localStorage.setItem('role', 'MENTOR');
+      } else if (hasMenteeId) {
+        window.localStorage.setItem('role', 'MENTEE');
+      } else if (Array.isArray(me.roles)) {
+        const normalized = me.roles.map((role) => String(role).toUpperCase());
+        const isMentor = normalized.some((role) => role.includes('MENTOR'));
+        const isMentee = normalized.some((role) => role.includes('MENTEE'));
+        if (isMentor) {
+          window.localStorage.setItem('role', 'MENTOR');
+        } else if (isMentee) {
+          window.localStorage.setItem('role', 'MENTEE');
+        }
       }
       lastHydratedToken = token;
       lastHydratedAt = Date.now();

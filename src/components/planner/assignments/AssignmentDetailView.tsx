@@ -50,10 +50,13 @@ export default function AssignmentDetailView({ todoId }: Props) {
 
   const storedAssignmentIdOverride = useMemo(() => {
     if (typeof window === 'undefined') return undefined;
-    const raw = window.localStorage.getItem('assignmentIdOverride');
+    const scopedKey = todoId ? `assignmentIdOverride:${todoId}` : null;
+    const raw =
+      (scopedKey ? window.localStorage.getItem(scopedKey) : null) ??
+      window.localStorage.getItem('assignmentIdOverride');
     const override = raw ? Number(raw) : NaN;
     return Number.isFinite(override) ? override : undefined;
-  }, []);
+  }, [todoId]);
 
   const assignmentMatch = useMemo(
     () =>
