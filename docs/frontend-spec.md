@@ -59,7 +59,7 @@
 
 ### Base URL and Proxy
 - `NEXT_PUBLIC_API_BASE_URL` (default: `/api`).
-- `next.config.ts` rewrites `/api/*` to `http://34.22.110.141/*`.
+- `next.config.ts` rewrites `/api/*` to `NEXT_PUBLIC_API_PROXY_TARGET` when set.
 
 ### Todo API (current frontend expectation)
 - Base path: `/todos`
