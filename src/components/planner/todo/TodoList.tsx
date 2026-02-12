@@ -104,7 +104,9 @@ export default function TodoList({
                   onClick={() => setActiveSubject(item)}
                   className={[
                     'rounded-full px-4 py-1.5 transition',
-                    active ? 'bg-[#004DFF] text-white' : 'hover:text-neutral-800',
+                    active
+                      ? 'bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] text-white shadow-[0_8px_16px_rgba(21,0,255,0.2)]'
+                      : 'hover:text-neutral-800',
                   ].join(' ')}
                 >
                   {item}

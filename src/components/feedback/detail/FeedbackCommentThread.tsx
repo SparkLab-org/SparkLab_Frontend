@@ -61,47 +61,15 @@ export default function FeedbackCommentThread({
   return (
     <div className="space-y-3">
       {orderedComments.map((comment) => {
-        const isMentor = comment.role === 'mentor';
+        const isSelf = currentRole ? currentRole === comment.role : comment.role === 'mentor';
         const isOwner = currentRole && currentRole === comment.role;
         const isEditing = editingId === comment.id;
         return (
           <div
             key={comment.id}
-            className={`flex ${isMentor ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${isSelf ? 'justify-end' : 'justify-start'}`}
           >
-            <div
-              className={[
-                'max-w-[82%] space-y-1',
-                isMentor ? 'items-end text-right' : 'items-start text-left',
-              ].join(' ')}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-400">
-                <span className="font-semibold text-neutral-500">
-                  {isMentor ? '멘토 답변' : '멘티 질문'}
-                </span>
-                {isOwner && (onEditStart || onDelete) && !isEditing && (
-                  <span className="flex items-center gap-1">
-                    {onEditStart && (
-                      <button
-                        type="button"
-                        onClick={() => onEditStart(comment)}
-                        className="text-neutral-500 hover:text-neutral-900"
-                      >
-                        수정
-                      </button>
-                    )}
-                    {onDelete && (
-                      <button
-                        type="button"
-                        onClick={() => onDelete(comment.id)}
-                        className="text-rose-500 hover:text-rose-600"
-                      >
-                        삭제
-                      </button>
-                    )}
-                  </span>
-                )}
-              </div>
+            <div className={['max-w-[80%] space-y-1', isSelf ? 'text-right' : 'text-left'].join(' ')}>
               {isEditing ? (
                 <div className="space-y-2">
                   <textarea
@@ -129,16 +97,43 @@ export default function FeedbackCommentThread({
               ) : (
                 <div
                   className={[
-                    'rounded-2xl px-4 py-3 text-sm',
-                    isMentor
-                      ? 'bg-[#E8F3FF] text-neutral-900'
-                      : 'bg-[#F5F5F5] text-neutral-900',
+                    'rounded-3xl px-4 py-3 text-sm',
+                    isSelf
+                      ? 'bg-[#DDEBFF] text-neutral-900 rounded-br-lg'
+                      : 'bg-[#F1F2F6] text-neutral-900 rounded-bl-lg',
                   ].join(' ')}
                 >
-                  <p className="whitespace-pre-line">{comment.content}</p>
+                  <p className="whitespace-pre-line font-semibold">{comment.content}</p>
                   <div className="mt-1 flex justify-end text-[10px] text-neutral-400">
                     {formatTimestamp(comment.createdAt)}
                   </div>
+                </div>
+              )}
+              {isOwner && (onEditStart || onDelete) && !isEditing && (
+                <div
+                  className={[
+                    'flex items-center gap-2 text-[10px] text-neutral-400',
+                    isSelf ? 'justify-end' : 'justify-start',
+                  ].join(' ')}
+                >
+                  {onEditStart && (
+                    <button
+                      type="button"
+                      onClick={() => onEditStart(comment)}
+                      className="hover:text-neutral-700"
+                    >
+                      수정
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={() => onDelete(comment.id)}
+                      className="text-rose-500 hover:text-rose-600"
+                    >
+                      삭제
+                    </button>
+                  )}
                 </div>
               )}
             </div>

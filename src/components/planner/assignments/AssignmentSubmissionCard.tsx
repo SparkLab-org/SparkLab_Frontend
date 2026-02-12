@@ -45,8 +45,7 @@ export default function AssignmentSubmissionCard({ onSubmit, disabled = false }:
 
   return (
     <section className="rounded-2xl bg-[#F5F5F5] p-4">
-      <p className="text-lg font-semibold text-neutral-900">과제 제출</p>
-      <p className="mt-1 text-xs text-neutral-500">사진 또는 PDF를 첨부하고 멘토에게 코멘트를 남겨보세요.</p>
+      <p className="text-xs text-neutral-500">사진 또는 PDF를 첨부하고 멘토에게 코멘트를 남겨보세요.</p>
 
       <div className="mt-3 rounded-xl bg-white px-3 py-4">
         <div className="flex items-center justify-between gap-3">
@@ -72,10 +71,25 @@ export default function AssignmentSubmissionCard({ onSubmit, disabled = false }:
 
         {files.length > 0 && (
           <ul className="mt-3 space-y-1 text-xs text-neutral-500">
-            {files.map((file) => (
-              <li key={`${file.name}-${file.size}-${file.lastModified}`} className="flex justify-between gap-2">
+            {files.map((file, index) => (
+              <li
+                key={`${file.name}-${file.size}-${file.lastModified}`}
+                className="flex items-center justify-between gap-2"
+              >
                 <span className="truncate text-neutral-700">{file.name}</span>
-                <span className="shrink-0">{formatFileSize(file.size)}</span>
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0">{formatFileSize(file.size)}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFiles((prev) => prev.filter((_, idx) => idx !== index));
+                    }}
+                    className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold text-neutral-500 hover:bg-neutral-200"
+                    aria-label="파일 제거"
+                  >
+                    X
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

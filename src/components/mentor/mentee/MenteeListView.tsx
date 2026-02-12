@@ -17,6 +17,7 @@ import {
 } from '@/src/services/feedback.api';
 import type { Feedback } from '@/src/lib/types/feedback';
 import { hasFeedbackForTodo } from '@/src/components/mentor/feedback/mentorFeedbackUtils';
+import { useMentorMenteesQuery } from '@/src/hooks/menteeQueries';
 
 type Props = {
   onSelect?: (id: string) => void;
@@ -64,6 +65,7 @@ function isAssignmentType(value?: string) {
 }
 
 export default function MenteeListView({ onSelect }: Props) {
+  const { isLoading: isMenteesLoading } = useMentorMenteesQuery();
   const mentees = useMentorStore((s) => s.mentees);
   const setSelectedId = useMentorStore((s) => s.setSelectedId);
   const selectedId = useMentorStore((s) => s.selectedId);
@@ -76,8 +78,8 @@ export default function MenteeListView({ onSelect }: Props) {
       format(addDays(start, i), 'yyyy-MM-dd')
     );
   }, []);
-  const { data: todos = [] } = useTodosRangeQuery(rangeDates);
-  const { data: feedbacks = [] } = useFeedbacksQuery();
+  const { data: todos = [], isFetching: isTodosFetching } = useTodosRangeQuery(rangeDates);
+  const { data: feedbacks = [], isFetching: isFeedbacksFetching } = useFeedbacksQuery();
   const todayKey = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const menteeStatusQueries = useQueries({
     queries: mentees.map((mentee) => {
@@ -160,6 +162,49 @@ export default function MenteeListView({ onSelect }: Props) {
       };
     });
   }, [mentees, todosByMentee, todoStatusByMentee]);
+
+  const isStatusLoading = menteeStatusQueries.some((query) => query.isLoading);
+  const showSkeleton =
+    isMenteesLoading || isTodosFetching || isFeedbacksFetching || isStatusLoading;
+
+  if (showSkeleton) {
+    return (
+      <div className="space-y-5 animate-pulse">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="h-6 w-32 rounded-full bg-neutral-200" />
+        </div>
+
+        <div className="w-full max-w-[900px] rounded-3xl bg-white p-4 overflow-x-auto">
+          <div className="min-w-[800px] space-y-3">
+            <div className="h-12 rounded-xl bg-[#F6F8FA]" />
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={`mentee-skeleton-${index}`}
+                className="grid grid-cols-12 items-center gap-2 rounded-xl bg-white px-4 py-4"
+              >
+                <div className="col-span-2 flex items-center gap-3 justify-start">
+                  <div className="h-10 w-10 rounded-full bg-neutral-200" />
+                  <div className="h-4 w-16 rounded-full bg-neutral-200" />
+                </div>
+                <div className="col-span-2 flex items-center justify-center">
+                  <div className="h-6 w-16 rounded-full bg-neutral-200" />
+                </div>
+                <div className="col-span-4 flex items-center justify-center">
+                  <div className="h-2 w-full max-w-[180px] rounded-full bg-neutral-200" />
+                </div>
+                <div className="col-span-2 flex items-center justify-center">
+                  <div className="h-4 w-8 rounded-full bg-neutral-200" />
+                </div>
+                <div className="col-span-2 flex items-center justify-center">
+                  <div className="h-4 w-8 rounded-full bg-neutral-200" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

@@ -15,7 +15,7 @@ export default function MyAchievementCard({
   monthTotalCount,
 }: Props) {
   return (
-    <section className="rounded-3xl bg-neutral-100 p-4">
+    <section className="rounded-3xl bg-white p-4">
       <button
         type="button"
         className="relative flex w-full items-center justify-start pr-5"

@@ -27,6 +27,7 @@ export default function PlannerPage() {
       <GreetingCard />
       <WeeklyCalendar />
       <TodayTodoSummary />
+      <YesterdayFeedbackSummary />
     </div>
   );
 }

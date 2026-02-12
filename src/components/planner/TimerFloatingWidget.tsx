@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useTodosQuery, useUpdateTodoMutation } from '@/src/hooks/todoQueries';
+import { useTodoDetailQuery, useTodosQuery, useUpdateTodoMutation } from '@/src/hooks/todoQueries';
 import { isOverdueTask } from '@/src/lib/utils/todoStatus';
 import { useTimerStore } from '@/src/store/timerStore';
 import { getTodoDetailHref } from '@/src/lib/utils/todoLink';
@@ -37,10 +37,12 @@ export default function TimerFloatingWidget() {
     () => todos.find((todo) => todo.id === activeTodoId),
     [todos, activeTodoId]
   );
+  const { data: activeTodoDetail } = useTodoDetailQuery(activeTodoId ?? undefined);
+  const resolvedActiveTodo = activeTodo ?? activeTodoDetail;
 
-  const isLocked = activeTodo ? isOverdueTask(activeTodo) : false;
-  const isDone = activeTodo?.status === 'DONE';
-  const isTimerDisabled = !activeTodo || isLocked || isDone;
+  const isLocked = resolvedActiveTodo ? isOverdueTask(resolvedActiveTodo) : false;
+  const isDone = resolvedActiveTodo?.status === 'DONE';
+  const isTimerDisabled = !resolvedActiveTodo || isLocked || isDone;
 
   useEffect(() => {
     if (!isRunning) return undefined;
@@ -56,7 +58,7 @@ export default function TimerFloatingWidget() {
   useEffect(() => {
     if (!activeTodoId) return;
     if (!isFetched || isFetching) return;
-    if (!activeTodo) {
+    if (!resolvedActiveTodo) {
       reset();
       setActiveTodoId(null);
       closePanel();
@@ -69,7 +71,7 @@ export default function TimerFloatingWidget() {
     }
   }, [
     activeTodoId,
-    activeTodo,
+    resolvedActiveTodo,
     isLocked,
     isDone,
     reset,
@@ -80,22 +82,22 @@ export default function TimerFloatingWidget() {
   ]);
 
   const handleRecord = () => {
-    if (!activeTodo) return;
+    if (!resolvedActiveTodo) return;
     if (elapsedSeconds <= 0) return;
     updateTodoMutation.mutate({
-      id: activeTodo.id,
-      patch: { studySeconds: (activeTodo.studySeconds ?? 0) + elapsedSeconds },
+      id: resolvedActiveTodo.id,
+      patch: { studySeconds: (resolvedActiveTodo.studySeconds ?? 0) + elapsedSeconds },
     });
     reset();
     closePanel();
   };
 
   const showFloating =
-    !!activeTodo && !isPanelOpen && !isTimerDisabled && (isRunning || elapsedSeconds > 0);
+    !!resolvedActiveTodo && !isPanelOpen && !isTimerDisabled && (isRunning || elapsedSeconds > 0);
 
   return (
     <>
-      {showFloating && activeTodo && (
+      {showFloating && resolvedActiveTodo && (
         <div
           role="button"
           tabIndex={0}
@@ -110,31 +112,31 @@ export default function TimerFloatingWidget() {
         >
           <span className="h-2 w-2 animate-pulse rounded-full bg-rose-400" aria-hidden />
           <Link
-            href={getTodoDetailHref(activeTodo)}
+            href={getTodoDetailHref(resolvedActiveTodo)}
             onClick={(event) => {
               event.stopPropagation();
               closePanel();
             }}
             className="max-w-30 truncate text-white hover:underline"
           >
-            {activeTodo.title}
+            {resolvedActiveTodo.title}
           </Link>
           <span className="text-[10px] text-neutral-300">{isRunning ? '기록 중' : '일시정지'}</span>
           <span className="tabular-nums">{formatHMS(elapsedSeconds)}</span>
         </div>
       )}
 
-      {isPanelOpen && activeTodo && (
+      {isPanelOpen && resolvedActiveTodo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
           <div className="w-full max-w-md space-y-4 rounded-2xl bg-white p-4 shadow-xl">
             <div className="flex items-center justify-between">
               <div>
                 <Link
-                  href={getTodoDetailHref(activeTodo)}
+                  href={getTodoDetailHref(resolvedActiveTodo)}
                   onClick={() => closePanel()}
                   className="text-lg font-semibold text-neutral-900 hover:underline"
                 >
-                  {activeTodo.title}
+                  {resolvedActiveTodo.title}
                 </Link>
               </div>
               <button
@@ -153,7 +155,7 @@ export default function TimerFloatingWidget() {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => (isRunning ? pause() : start(activeTodo.id))}
+                onClick={() => (isRunning ? pause() : start(resolvedActiveTodo.id))}
                 disabled={isTimerDisabled}
                 className={[
                   'flex-1 rounded-lg px-3 py-2 text-xs font-semibold',

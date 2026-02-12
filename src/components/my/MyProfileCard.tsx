@@ -36,9 +36,14 @@ export default function MyProfileCard({
   onOpenLevelInfo,
 }: Props) {
   return (
-    <section className="flex items-center justify-between rounded-3xl px-4 py-3">
+    <section className="flex items-center justify-between rounded-3xl bg-white px-4 py-3">
       <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-full bg-neutral-100" aria-hidden />
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100">
+          <div className="relative h-6 w-6" aria-hidden>
+            <div className="mx-auto h-3 w-3 rounded-full bg-neutral-400" />
+            <div className="absolute bottom-0 left-1/2 h-3 w-5 -translate-x-1/2 rounded-[999px] bg-neutral-400" />
+          </div>
+        </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-neutral-900">{name}</p>
           <div className="mt-1 flex flex-wrap items-center gap-1">

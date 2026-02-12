@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMentorStore } from '@/src/store/mentorStore';
 import { useTodoDetailQuery, useTodosQuery, todoQueryKeys } from '@/src/hooks/todoQueries';
 import { useAuthMeQuery } from '@/src/hooks/authQueries';
+import { useMenteeAssignmentsQuery } from '@/src/hooks/assignmentQueries';
 import {
   useCreateFeedbackMutation,
   useFeedbacksQuery,
@@ -18,6 +19,7 @@ import { isOverdueTask } from '@/src/lib/utils/todoStatus';
 import type { Todo } from '@/src/lib/types/planner';
 import { listAssignmentSubmissions } from '@/src/services/assignment.api';
 import { downloadFile } from '@/src/lib/utils/downloadFile';
+import { resolveAssignmentId } from '@/src/lib/utils/assignment';
 
 const DEFAULT_MENTEE_ID = 'm1';
 
@@ -147,8 +149,23 @@ export default function MenteeTodoDetailView() {
     todo?.id ?? todoId
   );
   const resolvedTodo = detailTodo ?? todo;
-  const assignmentId =
-    typeof resolvedTodo?.assignmentId === 'number' ? resolvedTodo.assignmentId : null;
+  const menteeNumericId = useMemo(() => {
+    const numeric = Number(resolvedMenteeId);
+    return Number.isFinite(numeric) ? numeric : undefined;
+  }, [resolvedMenteeId]);
+  const { data: assignmentGroups = [] } = useMenteeAssignmentsQuery({
+    menteeId: menteeNumericId,
+    enabled: Number.isFinite(menteeNumericId),
+  });
+  const assignmentId = useMemo(
+    () =>
+      resolveAssignmentId({
+        todoId,
+        todo: resolvedTodo,
+        assignmentGroups,
+      }) ?? null,
+    [assignmentGroups, resolvedTodo, todoId]
+  );
 
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const todoItemId = Number(resolvedTodo?.id ?? todoId);
@@ -397,6 +414,7 @@ function FeedbackEditor({
     (feedbackContent && feedbackContent.trim().length > 0) ||
       (saveSuccess && draft.trim().length > 0)
   );
+  const isDone = resolvedTodo.status === 'DONE';
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -479,6 +497,10 @@ function FeedbackEditor({
       setSaveError('피드백 저장에 실패했습니다.');
     }
   };
+
+  if (!isDone && !hasFeedback) {
+    return null;
+  }
 
   return (
     <>

@@ -15,6 +15,7 @@ import { getProgressFillStyle } from '@/src/lib/utils/progressStyle';
 import type { Todo } from '@/src/lib/types/planner';
 import type { Feedback } from '@/src/lib/types/feedback';
 import { hasFeedbackForTodo, resolveNumericId } from '@/src/components/mentor/feedback/mentorFeedbackUtils';
+import { useMentorMenteesQuery } from '@/src/hooks/menteeQueries';
 
 const DEFAULT_MENTEE_ID = 'm1';
 
@@ -81,6 +82,62 @@ function formatKoreanDate(date?: string) {
   return `${month}월${day}일`;
 }
 
+function MenteeDetailSkeleton({ showBackLink }: { showBackLink: boolean }) {
+  return (
+    <div className="space-y-5 animate-pulse">
+      <section className="rounded-3xl">
+        {showBackLink && <div className="h-3 w-32 rounded-full bg-neutral-200" />}
+        <div className="mt-4 flex items-center gap-3">
+          <div className="h-12 w-12 rounded-full bg-neutral-200" />
+          <div className="space-y-2">
+            <div className="h-4 w-24 rounded-full bg-neutral-200" />
+            <div className="h-3 w-40 rounded-full bg-neutral-200" />
+          </div>
+        </div>
+      </section>
+
+      <div className="h-px w-full bg-neutral-200/70" />
+
+      <section className="space-y-2">
+        <div className="h-4 w-24 rounded-full bg-neutral-200" />
+        <div className="rounded-3xl bg-[#F6F8FA] p-6">
+          <div className="rounded-2xl bg-white p-4">
+            <div className="h-3 w-24 rounded-full bg-neutral-200" />
+            <div className="mt-3 h-2.5 w-full rounded-full bg-neutral-200" />
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <div className="h-4 w-32 rounded-full bg-neutral-200" />
+        <div className="rounded-3xl bg-[#F6F8FA] p-6">
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={`feedback-skel-${index}`} className="h-12 rounded-2xl bg-white" />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <div key={`status-skel-${index}`} className="space-y-3 rounded-3xl bg-[#F6F8FA] p-4">
+            <div className="flex items-center justify-between">
+              <div className="h-4 w-24 rounded-full bg-neutral-200" />
+              <div className="h-3 w-10 rounded-full bg-neutral-200" />
+            </div>
+            <div className="grid gap-2">
+              {Array.from({ length: 3 }).map((__, itemIndex) => (
+                <div key={`status-item-${itemIndex}`} className="h-12 rounded-xl bg-white" />
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+}
+
 export default function MenteeDetailView({ menteeId: menteeIdProp, showBackLink = true }: Props) {
   const params = useParams<{ menteeId?: string | string[] }>();
   const menteeIdParam = params?.menteeId;
@@ -89,6 +146,7 @@ export default function MenteeDetailView({ menteeId: menteeIdProp, showBackLink 
     : menteeIdParam ?? DEFAULT_MENTEE_ID;
   const menteeId = menteeIdProp ?? menteeIdFromRoute;
 
+  const { isLoading: isMenteesLoading } = useMentorMenteesQuery();
   const mentees = useMentorStore((s) => s.mentees);
   const setSelectedId = useMentorStore((s) => s.setSelectedId);
   const selectedMentee = useMemo(
@@ -109,8 +167,8 @@ export default function MenteeDetailView({ menteeId: menteeIdProp, showBackLink 
     );
   }, []);
 
-  const { data: todos = [] } = useTodosRangeQuery(rangeDates);
-  const { data: feedbacks = [] } = useFeedbacksQuery();
+  const { data: todos = [], isFetching: isTodosFetching } = useTodosRangeQuery(rangeDates);
+  const { data: feedbacks = [], isFetching: isFeedbacksFetching } = useFeedbacksQuery();
 
   const feedbackByTodoId = useMemo(() => {
     const map = new Map<string, Feedback>();
@@ -137,10 +195,12 @@ export default function MenteeDetailView({ menteeId: menteeIdProp, showBackLink 
     () => resolveNumericId(resolvedMenteeId),
     [resolvedMenteeId]
   );
-  const { data: todoStatusList = [] } = useTodoFeedbackStatusQuery({
+  const { data: todoStatusList = [], isFetching: isStatusFetching } = useTodoFeedbackStatusQuery({
     menteeId: menteeNumericId,
     planDate: todayKey,
   });
+  const showSkeleton =
+    isMenteesLoading || isTodosFetching || isFeedbacksFetching || isStatusFetching;
 
   const todoStatusTodos = useMemo<Todo[]>(() => {
     if (todoStatusList.length === 0) return [];
@@ -259,6 +319,10 @@ export default function MenteeDetailView({ menteeId: menteeIdProp, showBackLink 
     [assignmentTodos]
   );
   const groupedStudies = useMemo(() => groupTodosByDate(studyTodos), [studyTodos]);
+
+  if (showSkeleton) {
+    return <MenteeDetailSkeleton showBackLink={showBackLink} />;
+  }
 
   if (!selectedMentee) {
     return (

@@ -26,11 +26,11 @@ import {
   useUpdateTodoMutation,
 } from "@/src/hooks/todoQueries";
 
-/** ✅ 일요일 시작 월간 그리드(6x7=42칸) 생성 */
+/** ✅ 일요일 시작 월간 그리드(5x7=35칸) 생성 */
 function buildMonthGrid(selectedDate: Date) {
   const monthStart = startOfMonth(selectedDate);
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-  return Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
+  return Array.from({ length: 35 }, (_, i) => addDays(gridStart, i));
 }
 
   // 나중에 page에서 selectedDate를 store로 올리고 싶으면,
@@ -101,11 +101,12 @@ export default function PlannerCalendar({}: Props) {
     }
     return dates;
   }, [selectedDate]);
-  const { data: todos = [] } = useTodosRangeQuery(monthDateKeys, {
+  const { data: todos = [], isFetching } = useTodosRangeQuery(monthDateKeys, {
     rangeStart: monthRange.start,
     rangeEnd: monthRange.end,
     scope: 'planner-calendar',
   });
+  const showSkeleton = isFetching && todos.length === 0;
 
   /** ✅ 헤더 텍스트 */
   const headerText = useMemo(() => {
@@ -169,7 +170,7 @@ export default function PlannerCalendar({}: Props) {
   };
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-6 px-3 pb-16">
+    <div className="mx-auto flex w-full max-w-none flex-col gap-6 px-2 pb-16 sm:max-w-2xl sm:px-3">
       <section className="rounded-3xl">
         <div className="flex justify-center">
           <PlannerViewToggle view={view} onChange={setView} />
@@ -224,6 +225,7 @@ export default function PlannerCalendar({}: Props) {
             monthCells={monthCells}
             progressByDate={progressByDate}
             itemsByDate={itemsByDate}
+            isLoading={showSkeleton}
           />
         </div>
       </section>

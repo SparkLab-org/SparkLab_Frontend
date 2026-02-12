@@ -9,7 +9,6 @@ import { useAuthStore } from '@/src/store/authStore';
 import MyAccountActions from './MyAccountActions';
 import MyAchievementCard from './MyAchievementCard';
 import MyHeader from './MyHeader';
-import MyHelpButton from './MyHelpButton';
 import MyProfileCard from './MyProfileCard';
 import MenteeLevelInfoModal from './MenteeLevelInfoModal';
 
@@ -53,9 +52,6 @@ export default function MyPageView() {
     [todos]
   );
 
-  const handleHelp = () => {
-    window.alert('준비중이에요.');
-  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -88,7 +84,6 @@ export default function MyPageView() {
         monthTotalCount={monthTotalCount}
       />
       <MyAccountActions onLogout={logout} />
-      <MyHelpButton onClick={handleHelp} />
       {isLevelInfoOpen && <MenteeLevelInfoModal onClose={() => setIsLevelInfoOpen(false)} />}
     </div>
   );

@@ -7,8 +7,10 @@ type Props = {
 
 export default function ListDetailHeader({ title, checked, onToggle, disabled = false }: Props) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <h2 className="text-xl font-semibold text-neutral-900">{title}</h2>
+    <div className="flex w-full items-start justify-between gap-4">
+      <h2 className="text-2xl font-semibold leading-tight text-neutral-900">
+        {title}
+      </h2>
       <button
         type="button"
         onClick={() => {
@@ -17,9 +19,9 @@ export default function ListDetailHeader({ title, checked, onToggle, disabled = 
         }}
         disabled={disabled}
         className={[
-          'flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition ring-1',
+          'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition ring-1',
           checked
-            ? 'bg-[#004DFF] text-white ring-[#004DFF]'
+            ? 'bg-[linear-gradient(131deg,#1500FF_6.72%,#3D9DF3_100%)] text-white ring-transparent shadow-[0_8px_16px_rgba(21,0,255,0.25)]'
             : 'bg-white text-neutral-500 ring-neutral-200 hover:ring-neutral-300',
           disabled ? 'cursor-not-allowed opacity-60' : '',
         ].join(' ')}

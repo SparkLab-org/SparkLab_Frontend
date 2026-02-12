@@ -12,14 +12,22 @@ import mentorTodoIcon from '@/src/assets/icons/mentorTodo.svg';
 
 export default function TodayTodoSummary() {
   const selectedDate = usePlannerStore((s) => s.selectedDate);
-  const { data: todos = [] } = useTodosQuery({ planDate: selectedDate });
+  const { data: todos = [], isFetching } = useTodosQuery({ planDate: selectedDate });
 
-  const todayTodos = useMemo(() => {
+  const sortedTodos = useMemo(() => {
     return todos
-      .filter((todo) => todo.dueDate === selectedDate && todo.status !== 'DONE')
+      .filter((todo) => todo.dueDate === selectedDate)
       .slice()
       .sort((a, b) => a.dueTime.localeCompare(b.dueTime));
   }, [todos, selectedDate]);
+  const pendingTodos = useMemo(
+    () => sortedTodos.filter((todo) => todo.status !== 'DONE'),
+    [sortedTodos]
+  );
+  const doneTodos = useMemo(
+    () => sortedTodos.filter((todo) => todo.status === 'DONE'),
+    [sortedTodos]
+  );
 
   const titleText = useMemo(() => {
     const todayKey = format(new Date(), 'yyyy-MM-dd');
@@ -38,6 +46,8 @@ export default function TodayTodoSummary() {
   };
   const mentorTodoSrc =
     typeof mentorTodoIcon === 'string' ? mentorTodoIcon : mentorTodoIcon?.src;
+  const showSkeleton = isFetching && todos.length === 0;
+  const skeletonRows = [0, 1, 2, 3];
 
   return (
     <section className="space-y-3 rounded-3xl bg-white p-4">
@@ -53,58 +63,128 @@ export default function TodayTodoSummary() {
       </div>
 
       <div className="grid gap-2">
-        {todayTodos.length === 0 && (
-          <div className="rounded-xl bg-[#FFF] px-3 py-3 text-sm text-neutral-500">
-            등록된 할 일이 없어요
-          </div>
-        )}
-
-        {todayTodos.slice(0, 10).map((todo) => (
-          <Link
-            key={todo.id}
-            href={getTodoDetailHref(todo)}
-            className="flex flex-row items-center gap-2 rounded-xl bg-[#F6F8FA] px-3 py-3.5 text-xs text-neutral-700 transition hover:ring-1 hover:ring-neutral-200"
-          >
-            <div className="flex w-full items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-2">
-                  {(todo.isFixed || getTodoType(todo) === '과제') && mentorTodoSrc ? (
-                    <img
-                      src={mentorTodoSrc}
-                      alt=""
-                      aria-hidden
-                      className="h-6 w-6 shrink-0"
-                    />
-                  ) : null}
-                  <p className="truncate text-sm font-semibold text-neutral-900">
-                    {todo.title}
-                  </p>
-                  <span
-                    className={[
-                      'rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                      (() => {
-                        const type = getTodoType(todo);
-                        return type === '과제'
-                          ? 'bg-purple-100 text-purple-600'
-                          : 'bg-emerald-100 text-emerald-700';
-                      })(),
-                    ].join(' ')}
-                  >
-                    {getTodoType(todo)}
-                  </span>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#B2B3B6]">
-                    {todo.subject}
-                  </span>
+        {showSkeleton ? (
+          <div className="grid gap-2">
+            {skeletonRows.map((row) => (
+              <div
+                key={`todo-skeleton-${row}`}
+                className="rounded-xl bg-[#F6F8FA] px-3 py-3.5"
+              >
+                <div className="animate-pulse space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="h-6 w-6 rounded-full bg-neutral-200" />
+                    <div className="h-4 flex-1 rounded bg-neutral-200" />
+                    <div className="h-4 w-14 rounded-full bg-neutral-200" />
+                    <div className="h-4 w-12 rounded-full bg-neutral-200" />
+                  </div>
+                  <div className="h-3 w-20 rounded bg-neutral-200" />
                 </div>
               </div>
-              {formatStudyTime(todo.studySeconds) && (
-                <span className="shrink-0 text-[14px] text-[#6B7389]">
-                  {formatStudyTime(todo.studySeconds)}
-                </span>
-              )}
-            </div>
-          </Link>
-        ))}
+            ))}
+          </div>
+        ) : (
+          <>
+            {sortedTodos.length === 0 && (
+              <div className="rounded-xl bg-[#FFF] px-3 py-3 text-sm text-neutral-500">
+                등록된 할 일이 없어요
+              </div>
+            )}
+
+            {pendingTodos.slice(0, 10).map((todo) => (
+              <Link
+                key={todo.id}
+                href={getTodoDetailHref(todo)}
+                className="flex flex-row items-center gap-2 rounded-xl bg-[#F6F8FA] px-3 py-3.5 text-xs text-neutral-700 transition hover:ring-1 hover:ring-neutral-200"
+              >
+                <div className="flex w-full items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                      {(todo.isFixed || getTodoType(todo) === '과제') && mentorTodoSrc ? (
+                        <img
+                          src={mentorTodoSrc}
+                          alt=""
+                          aria-hidden
+                          className="h-6 w-6 shrink-0"
+                        />
+                      ) : null}
+                      <p className="truncate text-sm font-semibold text-neutral-900">
+                        {todo.title}
+                      </p>
+                      <span
+                        className={[
+                          'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                          (() => {
+                            const type = getTodoType(todo);
+                            return type === '과제'
+                              ? 'bg-purple-100 text-purple-600'
+                              : 'bg-emerald-100 text-emerald-700';
+                          })(),
+                        ].join(' ')}
+                      >
+                        {getTodoType(todo)}
+                      </span>
+                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#B2B3B6]">
+                        {todo.subject}
+                      </span>
+                    </div>
+                  </div>
+                  {formatStudyTime(todo.studySeconds) && (
+                    <span className="shrink-0 text-[14px] text-[#6B7389]">
+                      {formatStudyTime(todo.studySeconds)}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            ))}
+
+            {doneTodos.slice(0, 10).map((todo) => (
+              <Link
+                key={todo.id}
+                href={getTodoDetailHref(todo)}
+                className="flex flex-row items-center gap-2 rounded-xl bg-emerald-50 px-3 py-3.5 text-xs text-neutral-700 ring-1 ring-emerald-200/80"
+              >
+                <div className="flex w-full items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                      {(todo.isFixed || getTodoType(todo) === '과제') && mentorTodoSrc ? (
+                        <img
+                          src={mentorTodoSrc}
+                          alt=""
+                          aria-hidden
+                          className="h-6 w-6 shrink-0"
+                        />
+                      ) : null}
+                      <p className="truncate text-sm font-semibold text-neutral-900">
+                        {todo.title}
+                      </p>
+                      <span
+                        className={[
+                          'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                          (() => {
+                            const type = getTodoType(todo);
+                            return type === '과제'
+                              ? 'bg-purple-100 text-purple-600'
+                              : 'bg-emerald-100 text-emerald-700';
+                          })(),
+                        ].join(' ')}
+                      >
+                        {getTodoType(todo)}
+                      </span>
+                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#B2B3B6]">
+                        {todo.subject}
+                      </span>
+                    </div>
+                  </div>
+                  {formatStudyTime(todo.studySeconds) && (
+                    <span className="shrink-0 text-[14px] text-[#6B7389]">
+                      {formatStudyTime(todo.studySeconds)}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </>
+        )}
       </div>
     </section>
   );

@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Todo } from '@/src/lib/types/planner';
 import { formatSeconds } from '@/src/components/mentor/feedback/mentorFeedbackUtils';
 import FeedbackCommentThread from '@/src/components/feedback/detail/FeedbackCommentThread';
 import FeedbackCommentComposer from '@/src/components/feedback/detail/FeedbackCommentComposer';
 import { useTodoDetailQuery } from '@/src/hooks/todoQueries';
+import { useMenteeAssignmentsQuery } from '@/src/hooks/assignmentQueries';
 import {
   createFeedbackComment,
   listFeedbackComments,
@@ -16,6 +17,7 @@ import {
   type AssignmentSubmissionResponse,
 } from '@/src/services/assignment.api';
 import { downloadFile } from '@/src/lib/utils/downloadFile';
+import { resolveAssignmentId } from '@/src/lib/utils/assignment';
 
 type Props = {
   todo: Todo | null;
@@ -68,10 +70,24 @@ export default function MentorFeedbackDetailPanel({
 }: Props) {
   const { data: detailTodo } = useTodoDetailQuery(todo?.id);
   const resolvedTodo = detailTodo ?? todo;
-  const assignmentId = useMemo(() => {
-    const raw = resolvedTodo?.assignmentId;
-    return typeof raw === 'number' ? raw : null;
-  }, [resolvedTodo?.assignmentId]);
+  const menteeNumericId = useMemo(() => {
+    const value = resolvedTodo?.assigneeId;
+    if (!value) return undefined;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : undefined;
+  }, [resolvedTodo?.assigneeId]);
+  const { data: assignmentGroups = [] } = useMenteeAssignmentsQuery({
+    menteeId: menteeNumericId,
+    enabled: Number.isFinite(menteeNumericId),
+  });
+  const assignmentId = useMemo(
+    () =>
+      resolveAssignmentId({
+        todo: resolvedTodo,
+        assignmentGroups,
+      }) ?? null,
+    [assignmentGroups, resolvedTodo]
+  );
   const queryClient = useQueryClient();
   const [commentError, setCommentError] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);

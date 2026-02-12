@@ -869,7 +869,7 @@ export async function listTodosByRange(
   params: ListTodosRangeParams
 ): Promise<{ todos: Todo[]; hasTodosField: boolean }> {
   if (USE_MOCK) {
-    return { todos: mockApi.listTodos(), hasTodosField: true };
+    return { todos: await mockApi.listTodos(), hasTodosField: true };
   }
   const storedRole = resolveStoredRole();
   const storedMenteeId =

@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { format, isSameDay, isSameMonth } from 'date-fns';
-import { useEffect, useState } from 'react';
 import { getProgressFillStyle } from '@/src/lib/utils/progressStyle';
 import { getTodoDetailHref } from '@/src/lib/utils/todoLink';
 
@@ -25,6 +24,7 @@ type Props = {
 
   progressByDate?: Record<string, number>;
   itemsByDate?: Record<string, TodoSummary[]>;
+  isLoading?: boolean;
 };
 
 function isoDate(d: Date) {
@@ -39,15 +39,8 @@ export default function PlannerDateGrid({
   monthCells,
   progressByDate,
   itemsByDate,
+  isLoading = false,
 }: Props) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return null;
-  }
   const days = view === 'week' ? weekDays : monthCells;
 
   return (
@@ -61,6 +54,13 @@ export default function PlannerDateGrid({
           !!progressByDate && Object.prototype.hasOwnProperty.call(progressByDate, key);
         const progressPercent = typeof progress === 'number' ? Math.round(progress * 100) : 0;
         const items = view === 'month' ? itemsByDate?.[key] ?? [] : [];
+        const assignmentCount =
+          view === 'month'
+            ? items.filter((item) => item.type === '과제' || item.isFixed).length
+            : 0;
+        const studyCount =
+          view === 'month' ? Math.max(0, items.length - assignmentCount) : 0;
+        const showSummarySkeleton = isLoading && view === 'month' && inMonth;
 
         const containerClassName = [
           view === 'month'
@@ -96,38 +96,9 @@ export default function PlannerDateGrid({
               d.getDate()
             )}
 
-            {view === 'month' && items.length > 0 && (
-              <div className="mt-1 flex w-full flex-col gap-1">
-                {items.slice(0, 2).map((item) => (
-                  <Link
-                    key={`${key}-${item.id}`}
-                    href={getTodoDetailHref({
-                      id: item.id,
-                      isFixed: Boolean(item.isFixed),
-                      type: item.type === '과제' ? '과제' : '학습',
-                    })}
-                    onClick={(event) => event.stopPropagation()}
-                    className={[
-                      'truncate text-[10px] font-semibold transition hover:underline',
-                      item.status === 'DONE'
-                        ? 'text-emerald-500'
-                        : 'text-purple-500',
-                    ].join(' ')}
-                  >
-                    {item.title}
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {view === 'week' && hasProgress && typeof progress === 'number' && (
-              <div className="absolute -bottom-2 left-1/2 w-10 -translate-x-1/2">
-                <div
-                  className={[
-                    'h-1.5 w-full overflow-hidden rounded-full',
-                    'bg-[#D5EBFF]',
-                  ].join(' ')}
-                >
+            {view === 'month' && hasProgress && !isLoading && (
+              <div className="w-full">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#D5EBFF]">
                   <div
                     className="h-full"
                     style={getProgressFillStyle(progressPercent)}
@@ -135,36 +106,86 @@ export default function PlannerDateGrid({
                 </div>
               </div>
             )}
+
+            {view === 'month' && (showSummarySkeleton || items.length > 0) && (
+              <div className="mt-1 flex w-full flex-col gap-1">
+                {showSummarySkeleton ? (
+                  <div className="space-y-1.5 animate-pulse">
+                    <div className="inline-flex w-fit items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-neutral-200" />
+                      <span className="h-2 w-4 rounded bg-neutral-200" />
+                    </div>
+                    <div className="inline-flex w-fit items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-neutral-200" />
+                      <span className="h-2 w-4 rounded bg-neutral-200" />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {assignmentCount > 0 && (
+                      <div className="inline-flex w-fit items-center gap-1 text-[10px] font-semibold text-purple-600">
+                        <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                        {assignmentCount}
+                      </div>
+                    )}
+                    {studyCount > 0 && (
+                      <div className="inline-flex w-fit items-center gap-1 text-[10px] font-semibold text-emerald-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        {studyCount}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {view === 'week' && (isLoading || (hasProgress && typeof progress === 'number')) && (
+              <div className="absolute -bottom-2 left-1/2 w-10 -translate-x-1/2">
+                <div
+                  className={[
+                    'h-1.5 w-full overflow-hidden rounded-full',
+                    'bg-[#D5EBFF]',
+                  ].join(' ')}
+                >
+                  {isLoading ? (
+                    <div className="h-full w-full animate-pulse bg-neutral-200" />
+                  ) : (
+                    <div
+                      className="h-full"
+                      style={getProgressFillStyle(progressPercent)}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
           </>
         );
 
-        return (
-          view === 'month' ? (
-            <div
-              key={key}
-              role="button"
-              tabIndex={0}
-              onClick={() => onSelectDate(d)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  onSelectDate(d);
-                }
-              }}
-              className={containerClassName}
-            >
-              {cellContent}
-            </div>
-          ) : (
-            <button
-              key={key}
-              type="button"
-              onClick={() => onSelectDate(d)}
-              className={containerClassName}
-            >
-              {cellContent}
-            </button>
-          )
+        return view === 'month' ? (
+          <div
+            key={key}
+            role="button"
+            tabIndex={0}
+            onClick={() => onSelectDate(d)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onSelectDate(d);
+              }
+            }}
+            className={containerClassName}
+          >
+            {cellContent}
+          </div>
+        ) : (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onSelectDate(d)}
+            className={containerClassName}
+          >
+            {cellContent}
+          </button>
         );
       })}
     </div>

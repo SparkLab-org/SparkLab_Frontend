@@ -65,10 +65,14 @@ export function mapAssignmentToTodo(
   };
 }
 
-export function useMenteeAssignmentsQuery(params?: { menteeId?: number }) {
+export function useMenteeAssignmentsQuery(params?: {
+  menteeId?: number;
+  enabled?: boolean;
+}) {
   const menteeId = params?.menteeId;
   return useQuery({
     queryKey: ['assignments', menteeId ?? 'self'],
     queryFn: () => listAssignments(menteeId),
+    enabled: params?.enabled ?? true,
   });
 }

@@ -10,7 +10,8 @@ export default function YesterdayFeedbackSummary() {
     () => format(subDays(new Date(), 1), 'yyyy-MM-dd'),
     []
   );
-  const { data: todos = [] } = useTodosQuery({ planDate: yesterdayKey });
+  const { data: todos = [], isFetching } = useTodosQuery({ planDate: yesterdayKey });
+  const showSkeleton = isFetching && todos.length === 0;
 
   const yesterdayFeedbackTodos = useMemo(() => {
     return todos
@@ -46,7 +47,24 @@ export default function YesterdayFeedbackSummary() {
       </div>
 
       <div className="grid gap-2">
-        {hasFeedback ? (
+        {showSkeleton ? (
+          <div className="grid gap-2">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={`yesterday-feedback-skeleton-${index}`}
+                className="rounded-xl bg-[#FFF] px-3 py-3"
+              >
+                <div className="animate-pulse space-y-2">
+                  <div className="h-4 w-2/3 rounded bg-neutral-200" />
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-12 rounded-full bg-neutral-200" />
+                    <div className="h-4 w-10 rounded-full bg-neutral-200" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : hasFeedback ? (
           yesterdayFeedbackTodos.slice(0, 10).map((todo) => (
             <div
               key={todo.id}

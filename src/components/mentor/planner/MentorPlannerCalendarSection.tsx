@@ -16,6 +16,7 @@ type Props = {
   selectedDate: Date;
   activeMonth: Date;
   scheduleByDate: Record<string, DaySchedule>;
+  isLoading?: boolean;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onSelectDate: (date: Date) => void;
@@ -28,6 +29,7 @@ export default function MentorPlannerCalendarSection({
   selectedDate,
   activeMonth,
   scheduleByDate,
+  isLoading = false,
   onPrevMonth,
   onNextMonth,
   onSelectDate,
@@ -99,26 +101,36 @@ export default function MentorPlannerCalendarSection({
                 ].join(' ')}
               >
                 <span className={`${dayLabelClass} ml-0.5`}>{format(date, 'd')}</span>
-                {dayItems.length > 0 && (
-                  <div className="mt-1.5 w-full px-0.5">
-                    <div className="h-1.5 w-full rounded-full bg-[#D5EBFF]">
-                      <div
-                        className="h-full rounded-full"
-                        style={getProgressFillStyle(progressPercent)}
-                      />
-                    </div>
+                {isLoading ? (
+                  <div className="mt-2 w-full space-y-1.5 px-0.5">
+                    <div className="h-1.5 w-full animate-pulse rounded-full bg-neutral-200" />
+                    <div className="h-2.5 w-full animate-pulse rounded-full bg-neutral-200" />
+                    <div className="h-2.5 w-4/5 animate-pulse rounded-full bg-neutral-200" />
                   </div>
+                ) : (
+                  <>
+                    {dayItems.length > 0 && (
+                      <div className="mt-1.5 w-full px-0.5">
+                        <div className="h-1.5 w-full rounded-full bg-[#D5EBFF]">
+                          <div
+                            className="h-full rounded-full"
+                            style={getProgressFillStyle(progressPercent)}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <div className="mt-1.5 w-full space-y-1 px-0.5">
+                      {dayItems.slice(0, 2).map((item, index) => (
+                        <span
+                          key={`${key}-${item.title}-${index}`}
+                          className={`block w-full rounded-full px-1.5 py-0.5 text-[10px] font-medium ${item.colorClass} truncate`}
+                        >
+                          {item.title}
+                        </span>
+                      ))}
+                    </div>
+                  </>
                 )}
-                <div className="mt-1.5 w-full space-y-1 px-0.5">
-                  {dayItems.slice(0, 2).map((item, index) => (
-                    <span
-                      key={`${key}-${item.title}-${index}`}
-                      className={`block w-full rounded-full px-1.5 py-0.5 text-[10px] font-medium ${item.colorClass} truncate`}
-                    >
-                      {item.title}
-                    </span>
-                  ))}
-                </div>
               </button>
             );
           })}

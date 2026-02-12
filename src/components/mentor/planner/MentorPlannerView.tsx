@@ -69,7 +69,7 @@ export default function MentorPlannerView() {
       end: format(monthEnd, 'yyyy-MM-dd'),
     };
   }, [activeMonth]);
-  const { data: todos = [] } = useTodosRangeQuery(monthDates, {
+  const { data: todos = [], isFetching: isCalendarFetching } = useTodosRangeQuery(monthDates, {
     rangeStart: monthRange.start,
     rangeEnd: monthRange.end,
     menteeId: menteeNumericIdForRange ?? undefined,
@@ -194,6 +194,9 @@ export default function MentorPlannerView() {
   ]);
 
   const scheduleByDate = useMemo(() => {
+    if (isCalendarFetching) {
+      return {};
+    }
     const menteeIdKey = activeMenteeId ? String(activeMenteeId) : '';
     const menteeNameKey = selectedMenteeName ? String(selectedMenteeName) : '';
     const menteeNumericKey = activeMenteeNumericId ? String(activeMenteeNumericId) : '';
@@ -231,6 +234,7 @@ export default function MentorPlannerView() {
     selectedMenteeName,
     todos,
     todoStatusTodos,
+    isCalendarFetching,
   ]);
 
   const headerLabel = useMemo(
@@ -317,6 +321,7 @@ export default function MentorPlannerView() {
         selectedDate={selectedDate}
         activeMonth={activeMonth}
         scheduleByDate={scheduleByDate}
+        isLoading={isCalendarFetching}
         onPrevMonth={goPrevMonth}
         onNextMonth={goNextMonth}
         onSelectDate={handleSelectDate}

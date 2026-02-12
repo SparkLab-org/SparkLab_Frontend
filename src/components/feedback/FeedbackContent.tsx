@@ -56,8 +56,12 @@ const feedbackReadStore = (() => {
 })();
 
 export default function FeedbackContent({ title }: Props) {
-  const { data: todos = [] } = useTodosQuery();
-  const { data: feedbacks = [] } = useFeedbacksQuery();
+  const { data: todos = [], isFetching: todosFetching } = useTodosQuery();
+  const {
+    data: feedbacks = [],
+    isLoading: feedbackLoading,
+    isFetching: feedbackFetching,
+  } = useFeedbacksQuery();
   const [activeSubject, setActiveSubject] = useState<SubjectFilter>("전체");
   const rawReadIds = useSyncExternalStore(
     feedbackReadStore.subscribe,
@@ -138,6 +142,8 @@ export default function FeedbackContent({ title }: Props) {
     const next = Array.from(new Set([...readIds, id]));
     feedbackReadStore.setReadIds(next);
   };
+  const showSkeleton =
+    (feedbackLoading || feedbackFetching || todosFetching) && feedbacks.length === 0;
 
   return (
     <div className="space-y-5">
@@ -147,7 +153,31 @@ export default function FeedbackContent({ title }: Props) {
       </header>
       <FeedbackSortBar />
       <FeedbackSubjectToggle activeSubject={activeSubject} onChange={setActiveSubject} />
-      <FeedbackList items={feedbackItems} isUnread={isUnread} onMarkRead={markRead} />
+      {showSkeleton ? (
+        <div className="grid gap-4">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={`feedback-skeleton-${index}`}
+              className="rounded-3xl bg-neutral-100 px-4 py-4"
+            >
+              <div className="animate-pulse space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-12 rounded-full bg-neutral-200" />
+                    <div className="h-4 w-14 rounded-full bg-neutral-200" />
+                  </div>
+                  <div className="h-3 w-3 rounded-full bg-neutral-200" />
+                </div>
+                <div className="h-4 w-2/3 rounded bg-neutral-200" />
+                <div className="h-3 w-full rounded bg-neutral-200" />
+                <div className="h-3 w-4/5 rounded bg-neutral-200" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <FeedbackList items={feedbackItems} isUnread={isUnread} onMarkRead={markRead} />
+      )}
     </div>
   );
 }

@@ -41,11 +41,12 @@ export default function WeeklyCalendar({}: Props) {
       end: format(monthEnd, "yyyy-MM-dd"),
     };
   }, [selectedDate]);
-  const { data: todos = [] } = useTodosRangeQuery(weekDateKeys, {
+  const { data: todos = [], isFetching } = useTodosRangeQuery(weekDateKeys, {
     rangeStart: monthRange.start,
     rangeEnd: monthRange.end,
     scope: 'planner-home',
   });
+  const showSkeleton = isFetching && todos.length === 0;
 
   const progressByDate: Record<string, number> = useMemo(() => {
     const counts = todos.reduce<Record<string, { total: number; done: number }>>((acc, todo) => {
@@ -114,6 +115,7 @@ export default function WeeklyCalendar({}: Props) {
         weekDays={weekDays}
         monthCells={[]}
         progressByDate={progressByDate}
+        isLoading={showSkeleton}
       />
     </section>
   );
