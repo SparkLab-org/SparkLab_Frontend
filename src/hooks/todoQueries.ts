@@ -53,6 +53,13 @@ export const todoQueryKeys = {
 };
 
 type TodoItem = ReturnType<typeof getTodoSnapshot>[number];
+type QueryBehaviorOptions = {
+  staleTime?: number;
+  gcTime?: number;
+  refetchOnWindowFocus?: boolean;
+  refetchOnReconnect?: boolean;
+  refetchOnMount?: boolean | 'always';
+};
 
 const RANGE_CACHE_TTL_MS = 60 * 1000;
 const RANGE_TODOS_CACHE = new Map<string, { ts: number; items: TodoItem[] }>();
@@ -126,7 +133,13 @@ export function useTodoDetailQuery(todoId?: string | number) {
 
 export function useTodosRangeQuery(
   dates: string[],
-  options?: { rangeStart?: string; rangeEnd?: string; menteeId?: number; scope?: string }
+  options?: {
+    rangeStart?: string;
+    rangeEnd?: string;
+    menteeId?: number;
+    scope?: string;
+    queryOptions?: QueryBehaviorOptions;
+  }
 ) {
   const normalized = Array.from(
     new Set(dates.filter((date) => isValidDateString(date)))
@@ -137,6 +150,7 @@ export function useTodosRangeQuery(
   const rangeEnd = options?.rangeEnd;
   const menteeId = options?.menteeId;
   const scope = options?.scope ?? null;
+  const queryOptions = options?.queryOptions;
   const rangeKey = rangeStart && rangeEnd ? `${rangeStart}:${rangeEnd}` : null;
   const shouldUseRange = Boolean(rangeStart && rangeEnd);
 
@@ -217,6 +231,7 @@ export function useTodosRangeQuery(
       if (!Array.isArray(data) || data.length === 0) return 'always';
       return false;
     },
+    ...queryOptions,
     enabled: normalized.length > 0 || shouldUseRange,
   });
 }

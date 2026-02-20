@@ -17,13 +17,21 @@ export const feedbackQueryKeys = {
   detail: (id?: number | string | null) => [...feedbackQueryKeys.all, 'detail', id ?? null] as const,
 };
 
+type QueryBehaviorOptions = {
+  staleTime?: number;
+  gcTime?: number;
+  refetchOnWindowFocus?: boolean;
+  refetchOnReconnect?: boolean;
+  refetchOnMount?: boolean;
+};
+
 export function useFeedbacksQuery(params?: {
   todoItemId?: number;
   isImportant?: boolean;
   targetDate?: string;
   subject?: 'KOREAN' | 'ENGLISH' | 'MATH' | 'ALL';
   sort?: string;
-}) {
+}, queryOptions?: QueryBehaviorOptions) {
   const safeParams = {
     todoItemId: params?.todoItemId,
     isImportant: params?.isImportant,
@@ -35,6 +43,7 @@ export function useFeedbacksQuery(params?: {
   return useQuery({
     queryKey: [...feedbackQueryKeys.all, safeParams],
     queryFn: () => listFeedbacks(safeParams),
+    ...queryOptions,
   });
 }
 
@@ -90,7 +99,7 @@ function getTodayDateString() {
 export function useTodoFeedbackStatusQuery(params?: {
   menteeId?: number;
   planDate?: string;
-}) {
+}, queryOptions?: QueryBehaviorOptions) {
   const menteeId = params?.menteeId;
   const planDate = params?.planDate ?? null;
 
@@ -101,6 +110,7 @@ export function useTodoFeedbackStatusQuery(params?: {
       const resolvedDate = planDate ?? getTodayDateString();
       return listTodoFeedbackStatus({ menteeId, planDate: resolvedDate });
     },
+    ...queryOptions,
     enabled: typeof menteeId === 'number',
   });
 }
@@ -112,7 +122,7 @@ function isValidDateString(value?: string): value is string {
 export function useTodoFeedbackStatusRangeQuery(params?: {
   menteeId?: number;
   dates?: string[];
-}) {
+}, queryOptions?: QueryBehaviorOptions) {
   const menteeId = params?.menteeId;
   const dates = Array.from(
     new Set((params?.dates ?? []).filter((date) => isValidDateString(date)))
@@ -155,6 +165,7 @@ export function useTodoFeedbackStatusRangeQuery(params?: {
       });
       return Array.from(merged.values());
     },
+    ...queryOptions,
     enabled: typeof menteeId === 'number' && dates.length > 0,
   });
 }

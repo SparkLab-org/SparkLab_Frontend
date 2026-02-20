@@ -7,6 +7,7 @@
  */
 
 const RAW_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api';
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 const resolveApiBaseUrl = () => {
   if (typeof window === 'undefined') {
@@ -97,6 +98,7 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
   const shouldHydrate =
+    !DEMO_MODE &&
     typeof window !== 'undefined' &&
     token &&
     !path.startsWith('/auth/signin') &&
@@ -124,11 +126,11 @@ export async function apiFetch<T>(
 
   // 🔥 401 공통 처리
   if (res.status === 401) {
-    localStorage.removeItem('accessToken');
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !DEMO_MODE) {
+      localStorage.removeItem('accessToken');
       window.alert('세션이 만료되었습니다. 다시 로그인해 주세요.');
+      window.location.href = '/';
     }
-    window.location.href = '/';
     throw new Error('Unauthorized');
   }
 

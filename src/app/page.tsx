@@ -1,10 +1,11 @@
 'use client';
 
-import Link from 'next/link';
-import LoginCard, { LoginRole } from '@/src/components/auth/LoginCard';
+import LoginCard from '@/src/components/auth/LoginCard';
 import { useUiPreferenceStore } from '@/src/store/uiPreferenceStore';
 import seolStudyIcon from '@/src/assets/icons/seolStudy.svg';
 import sparkLabIcon from '@/src/assets/icons/sparkLab.svg';
+
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 export default function Home() {
   const role = useUiPreferenceStore((s) => s.homeRole);
@@ -38,7 +39,11 @@ export default function Home() {
         <section className="flex flex-col items-center gap-5 text-center">
           <div className="space-y-4">
             <h1 className="text-lg font-semibold leading-tight lg:text-4xl">로그인</h1>
-            
+            {DEMO_MODE ? (
+              <p className="mx-auto max-w-xl rounded-2xl border border-[#3D9DF3]/20 bg-[#EAF4FF] px-4 py-3 text-xs text-[#245AAB] sm:text-sm">
+                포트폴리오 데모 모드입니다. 일부 기능은 브라우저 로컬 데이터로 동작합니다.
+              </p>
+            ) : null}
           </div>
 
           <div className="w-full max-w-md">

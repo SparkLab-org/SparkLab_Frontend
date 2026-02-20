@@ -23,6 +23,14 @@ type Props = {
   onSelect?: (id: string) => void;
 };
 
+const STATIC_QUERY_OPTIONS = {
+  staleTime: Infinity,
+  gcTime: 30 * 60 * 1000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  refetchOnMount: false,
+} as const;
+
 function getLevelLabel(level?: ActiveLevel) {
   switch (level) {
     case 'NORMAL':
@@ -65,7 +73,7 @@ function isAssignmentType(value?: string) {
 }
 
 export default function MenteeListView({ onSelect }: Props) {
-  const { isLoading: isMenteesLoading } = useMentorMenteesQuery();
+  const { isLoading: isMenteesLoading } = useMentorMenteesQuery(STATIC_QUERY_OPTIONS);
   const mentees = useMentorStore((s) => s.mentees);
   const setSelectedId = useMentorStore((s) => s.setSelectedId);
   const selectedId = useMentorStore((s) => s.selectedId);
@@ -78,8 +86,11 @@ export default function MenteeListView({ onSelect }: Props) {
       format(addDays(start, i), 'yyyy-MM-dd')
     );
   }, []);
-  const { data: todos = [], isFetching: isTodosFetching } = useTodosRangeQuery(rangeDates);
-  const { data: feedbacks = [], isFetching: isFeedbacksFetching } = useFeedbacksQuery();
+  const { data: todos = [] } = useTodosRangeQuery(rangeDates, {
+    scope: 'mentor-mentee-list',
+    queryOptions: STATIC_QUERY_OPTIONS,
+  });
+  const { data: feedbacks = [] } = useFeedbacksQuery(undefined, STATIC_QUERY_OPTIONS);
   const todayKey = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const menteeStatusQueries = useQueries({
     queries: mentees.map((mentee) => {
@@ -92,6 +103,11 @@ export default function MenteeListView({ onSelect }: Props) {
           if (typeof menteeNumericId !== 'number') return Promise.resolve([]);
           return listTodoFeedbackStatus({ menteeId: menteeNumericId, planDate: todayKey });
         },
+        staleTime: Infinity,
+        gcTime: 30 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        refetchOnMount: false,
         enabled: typeof menteeNumericId === 'number',
       };
     }),
@@ -163,9 +179,7 @@ export default function MenteeListView({ onSelect }: Props) {
     });
   }, [mentees, todosByMentee, todoStatusByMentee]);
 
-  const isStatusLoading = menteeStatusQueries.some((query) => query.isLoading);
-  const showSkeleton =
-    isMenteesLoading || isTodosFetching || isFeedbacksFetching || isStatusLoading;
+  const showSkeleton = isMenteesLoading && mentees.length === 0;
 
   if (showSkeleton) {
     return (

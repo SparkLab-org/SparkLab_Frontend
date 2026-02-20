@@ -6,10 +6,19 @@ export const menteeQueryKeys = {
   mentor: () => [...menteeQueryKeys.all, 'mentor'] as const,
 };
 
-export function useMentorMenteesQuery() {
+type QueryBehaviorOptions = {
+  staleTime?: number;
+  gcTime?: number;
+  refetchOnWindowFocus?: boolean;
+  refetchOnReconnect?: boolean;
+  refetchOnMount?: boolean;
+};
+
+export function useMentorMenteesQuery(options?: QueryBehaviorOptions) {
   return useQuery({
     queryKey: menteeQueryKeys.mentor(),
     queryFn: () => listMenteesByMentor(),
+    ...options,
   });
 }
 

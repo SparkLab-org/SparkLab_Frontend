@@ -24,6 +24,14 @@ type Props = {
   showBackLink?: boolean;
 };
 
+const STATIC_QUERY_OPTIONS = {
+  staleTime: Infinity,
+  gcTime: 30 * 60 * 1000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  refetchOnMount: false,
+} as const;
+
 function getStatusLabel(todo: Todo) {
   if (isOverdueTask(todo)) {
     return todo.status === 'DONE' ? '지각' : '미제출';
@@ -146,7 +154,7 @@ export default function MenteeDetailView({ menteeId: menteeIdProp, showBackLink 
     : menteeIdParam ?? DEFAULT_MENTEE_ID;
   const menteeId = menteeIdProp ?? menteeIdFromRoute;
 
-  const { isLoading: isMenteesLoading } = useMentorMenteesQuery();
+  const { isLoading: isMenteesLoading } = useMentorMenteesQuery(STATIC_QUERY_OPTIONS);
   const mentees = useMentorStore((s) => s.mentees);
   const setSelectedId = useMentorStore((s) => s.setSelectedId);
   const selectedMentee = useMemo(
@@ -167,8 +175,11 @@ export default function MenteeDetailView({ menteeId: menteeIdProp, showBackLink 
     );
   }, []);
 
-  const { data: todos = [], isFetching: isTodosFetching } = useTodosRangeQuery(rangeDates);
-  const { data: feedbacks = [], isFetching: isFeedbacksFetching } = useFeedbacksQuery();
+  const { data: todos = [] } = useTodosRangeQuery(rangeDates, {
+    scope: 'mentor-mentee-detail',
+    queryOptions: STATIC_QUERY_OPTIONS,
+  });
+  const { data: feedbacks = [] } = useFeedbacksQuery(undefined, STATIC_QUERY_OPTIONS);
 
   const feedbackByTodoId = useMemo(() => {
     const map = new Map<string, Feedback>();
@@ -195,12 +206,14 @@ export default function MenteeDetailView({ menteeId: menteeIdProp, showBackLink 
     () => resolveNumericId(resolvedMenteeId),
     [resolvedMenteeId]
   );
-  const { data: todoStatusList = [], isFetching: isStatusFetching } = useTodoFeedbackStatusQuery({
-    menteeId: menteeNumericId,
-    planDate: todayKey,
-  });
-  const showSkeleton =
-    isMenteesLoading || isTodosFetching || isFeedbacksFetching || isStatusFetching;
+  const { data: todoStatusList = [] } = useTodoFeedbackStatusQuery(
+    {
+      menteeId: menteeNumericId,
+      planDate: todayKey,
+    },
+    STATIC_QUERY_OPTIONS
+  );
+  const showSkeleton = isMenteesLoading && mentees.length === 0;
 
   const todoStatusTodos = useMemo<Todo[]>(() => {
     if (todoStatusList.length === 0) return [];

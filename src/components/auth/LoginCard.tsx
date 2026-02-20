@@ -1,12 +1,39 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { signIn } from '@/src/services/auth.api';
 import { getMe } from '@/src/services/auth.me.api';
 import { findOrCreateDailyPlan } from '@/src/services/dailyPlan.api';
 import { useAuthStore } from '@/src/store/authStore';
 
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+const DEMO_MENTEE_ID = 1;
+const DEMO_MENTOR_ID = 1;
+
+function todayISO() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function clearSessionStorage() {
+  if (typeof window === 'undefined') return;
+  const keysToRemove = ['accessToken', 'accountId', 'menteeId', 'mentorId', 'plannerId', 'role'];
+  keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+  for (let i = window.localStorage.length - 1; i >= 0; i -= 1) {
+    const key = window.localStorage.key(i);
+    if (!key) continue;
+    if (
+      key.startsWith('dailyPlan:') ||
+      key.startsWith('plannerId:') ||
+      key.startsWith('dailyPlanFail:')
+    ) {
+      window.localStorage.removeItem(key);
+    }
+  }
+}
 
 export type LoginRole = 'mentee' | 'mentor';
 
@@ -20,89 +47,95 @@ export default function LoginCard({ role, onRoleChange }: Props) {
   const [accountPw, setAccountPw] = useState('');
   const [error, setError] = useState('');
 
-
   const title = useMemo(() => '', []);
 
-  const subtitle = useMemo(
-    () =>
-      role === 'mentee'
-        ? ''
-        : '',
-    [role]
-  );
+  const subtitle = useMemo(() => (role === 'mentee' ? '' : ''), [role]);
 
-  const cta = useMemo(
-    () => (role === 'mentee' ? '멘티로 로그인' : '멘토로 로그인'),
-    [role]
-  );
+  const cta = useMemo(() => (role === 'mentee' ? '멘티로 로그인' : '멘토로 로그인'), [role]);
+  const setAuthenticated = useAuthStore((s) => s.setAuthenticated);
 
-   const setAuthenticated = useAuthStore((s) => s.setAuthenticated);
+  const onDemoStart = async () => {
+    if (!DEMO_MODE || typeof window === 'undefined') return;
+    setError('');
+    clearSessionStorage();
+    const fallbackRole = role === 'mentor' ? 'MENTOR' : 'MENTEE';
+    const nextPath = fallbackRole === 'MENTOR' ? '/mentor' : '/planner';
+    const demoAccountId = fallbackRole === 'MENTOR' ? 'demo-mentor' : 'demo-mentee';
+    window.localStorage.setItem('accessToken', `demo-token-${demoAccountId}`);
+    window.localStorage.setItem('accountId', demoAccountId);
+    window.localStorage.setItem('role', fallbackRole);
+    if (fallbackRole === 'MENTOR') {
+      window.localStorage.setItem('mentorId', String(DEMO_MENTOR_ID));
+      window.localStorage.setItem('plannerId', '0');
+    } else {
+      window.localStorage.setItem('menteeId', String(DEMO_MENTEE_ID));
+      const planDate = todayISO();
+      try {
+        const res = await findOrCreateDailyPlan({ planDate, menteeId: DEMO_MENTEE_ID });
+        if (res.dailyPlanId && res.dailyPlanId > 0) {
+          window.localStorage.setItem('plannerId', String(res.dailyPlanId));
+          window.localStorage.setItem(`plannerId:${demoAccountId}`, String(res.dailyPlanId));
+        } else {
+          window.localStorage.setItem('plannerId', '1');
+        }
+      } catch {
+        window.localStorage.setItem('plannerId', '1');
+      }
+    }
+    setAuthenticated(true);
+    window.location.href = nextPath;
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     try {
-      if (typeof window !== 'undefined') {
-        // 이전 계정 정보 정리 (계정 섞임 방지)
-        const keysToRemove = ['accountId', 'menteeId', 'mentorId', 'plannerId', 'role'];
-        keysToRemove.forEach((key) => localStorage.removeItem(key));
-        for (let i = localStorage.length - 1; i >= 0; i -= 1) {
-          const key = localStorage.key(i);
-          if (!key) continue;
-          if (key.startsWith('dailyPlan:') || key.startsWith('plannerId:')) {
-            localStorage.removeItem(key);
-          }
-        }
-      }
+      clearSessionStorage();
       const res = await signIn({ accountId, password: accountPw });
-      console.log('signin res:', res);
-      // ✅ 토큰 저장
-      localStorage.setItem('accessToken', res.accessToken);
+      window.localStorage.setItem('accessToken', res.accessToken);
       if (accountId.trim().length > 0) {
-        localStorage.setItem('accountId', accountId.trim());
+        window.localStorage.setItem('accountId', accountId.trim());
       }
       const fallbackRole = role === 'mentor' ? 'MENTOR' : 'MENTEE';
       let nextPath = fallbackRole === 'MENTOR' ? '/mentor' : '/planner';
+      if (DEMO_MODE) {
+        window.localStorage.setItem('role', fallbackRole);
+        if (fallbackRole === 'MENTOR') {
+          window.localStorage.setItem('mentorId', String(DEMO_MENTOR_ID));
+        } else {
+          window.localStorage.setItem('menteeId', String(DEMO_MENTEE_ID));
+        }
+      }
       try {
         const me = await getMe();
         let resolvedMenteeId: number | null = null;
         let resolvedMentorId: number | null = null;
         if (typeof me.accountId === 'string') {
-          localStorage.setItem('accountId', me.accountId);
+          window.localStorage.setItem('accountId', me.accountId);
         }
         if (me.menteeId !== undefined && me.menteeId !== null) {
-          const parsed =
-            typeof me.menteeId === 'number'
-              ? me.menteeId
-              : Number(me.menteeId);
+          const parsed = typeof me.menteeId === 'number' ? me.menteeId : Number(me.menteeId);
           if (Number.isFinite(parsed)) {
             resolvedMenteeId = parsed;
           }
         }
         if (me.mentorId !== undefined && me.mentorId !== null) {
-          const parsed =
-            typeof me.mentorId === 'number'
-              ? me.mentorId
-              : Number(me.mentorId);
+          const parsed = typeof me.mentorId === 'number' ? me.mentorId : Number(me.mentorId);
           if (Number.isFinite(parsed)) {
             resolvedMentorId = parsed;
           }
         }
         if (resolvedMentorId !== null) {
-          localStorage.setItem('mentorId', String(resolvedMentorId));
+          window.localStorage.setItem('mentorId', String(resolvedMentorId));
         }
         if (me.plannerId !== undefined && me.plannerId !== null) {
-          const parsed =
-            typeof me.plannerId === 'number'
-              ? me.plannerId
-              : Number(me.plannerId);
+          const parsed = typeof me.plannerId === 'number' ? me.plannerId : Number(me.plannerId);
           if (Number.isFinite(parsed)) {
-            localStorage.setItem('plannerId', String(parsed));
+            window.localStorage.setItem('plannerId', String(parsed));
           }
         } else {
-          // 임시 값: 백엔드에 실제 plannerId가 없을 때 0으로 저장
-          localStorage.setItem('plannerId', '0');
+          window.localStorage.setItem('plannerId', '0');
         }
 
         let resolvedRole = fallbackRole;
@@ -129,18 +162,14 @@ export default function LoginCard({ role, onRoleChange }: Props) {
         }
 
         if (resolvedRole === 'MENTEE' && resolvedMenteeId !== null) {
-          localStorage.setItem('menteeId', String(resolvedMenteeId));
-          const now = new Date();
-          const yyyy = now.getFullYear();
-          const mm = String(now.getMonth() + 1).padStart(2, '0');
-          const dd = String(now.getDate()).padStart(2, '0');
-          const planDate = `${yyyy}-${mm}-${dd}`;
+          window.localStorage.setItem('menteeId', String(resolvedMenteeId));
+          const planDate = todayISO();
           try {
             const res = await findOrCreateDailyPlan({ planDate });
             if (res.dailyPlanId && res.dailyPlanId > 0) {
-              localStorage.setItem('plannerId', String(res.dailyPlanId));
+              window.localStorage.setItem('plannerId', String(res.dailyPlanId));
               if (typeof me.accountId === 'string') {
-                localStorage.setItem(
+                window.localStorage.setItem(
                   `plannerId:${me.accountId}`,
                   String(res.dailyPlanId)
                 );
@@ -151,20 +180,17 @@ export default function LoginCard({ role, onRoleChange }: Props) {
           }
         }
 
-        localStorage.setItem('role', resolvedRole);
+        window.localStorage.setItem('role', resolvedRole);
         nextPath = resolvedRole === 'MENTOR' ? '/mentor' : '/planner';
       } catch {
-        localStorage.setItem('role', fallbackRole);
+        window.localStorage.setItem('role', fallbackRole);
       }
       setAuthenticated(true);
-
-      // 로그인 성공 후 이동
       window.location.href = nextPath;
     } catch {
-      setError('아이디 또는 비밀번호가 올바르지 않습니다.');
+      setError(DEMO_MODE ? '데모 시작에 실패했습니다. 다시 시도해 주세요.' : '아이디 또는 비밀번호가 올바르지 않습니다.');
     }
   };
-
 
   return (
     <div className="space-y-4 rounded-3xl bg-white p-6 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
@@ -203,16 +229,21 @@ export default function LoginCard({ role, onRoleChange }: Props) {
         {subtitle ? (
           <p className="mt-1 text-xs text-neutral-500">{subtitle}</p>
         ) : null}
+        {DEMO_MODE ? (
+          <p className="mt-3 rounded-xl bg-[#F6F8FA] px-3 py-2 text-left text-xs text-neutral-600">
+            데모 모드에서는 실제 서버 대신 브라우저 로컬 데이터로 동작합니다.
+          </p>
+        ) : null}
         <form onSubmit={onSubmit} className="mt-4 space-y-3">
           <input
             value={accountId}
-            onChange={(e)=>setAccountId(e.target.value)}
+            onChange={(e) => setAccountId(e.target.value)}
             placeholder="아이디"
             className="w-full rounded-lg bg-[#F6F8FA] px-3 py-3 text-sm font-semibold text-[#2B2B2B] outline-none focus:border-[#3D9DF3]"
           />
           <input
             value={accountPw}
-            onChange={(e)=>setAccountPw(e.target.value)}
+            onChange={(e) => setAccountPw(e.target.value)}
             type="password"
             placeholder="비밀번호"
             className="w-full rounded-lg bg-[#F6F8FA] px-3 py-3 text-sm font-semibold text-[#2B2B2B] outline-none focus:border-[#3D9DF3]"
@@ -226,6 +257,15 @@ export default function LoginCard({ role, onRoleChange }: Props) {
           >
             {cta}
           </button>
+          {DEMO_MODE ? (
+            <button
+              type="button"
+              onClick={onDemoStart}
+              className="w-full rounded-xl border border-[#3D9DF3]/30 bg-white px-3 py-3 text-sm font-semibold text-[#286CCF] transition hover:-translate-y-0.5"
+            >
+              데모로 바로 입장
+            </button>
+          ) : null}
         </form>
       </div>
 
